@@ -252,7 +252,7 @@ class Graph(object):
         return res.body["vertex"]
 
     def create_vertex(self, collection, data, wait_for_sync=False,
-                      _batch=False):
+                      batch=False):
         """Create a vertex to the specified vertex collection if this graph.
 
         If ``data`` contains the ``_key`` key, its value must be unused
@@ -270,20 +270,20 @@ class Graph(object):
         """
         path = "/_api/gharial/{}/vertex/{}".format(self.name, collection)
         params = {"waitForSync": wait_for_sync}
-        if _batch:
+        if batch:
             return {
                 "method": "post",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.post(path=path, data=data, params=params)
+        res = self.api.post(endpoint=path, data=data, params=params)
         if res.status_code not in HTTP_OK:
             raise VertexCreateError(res)
         return res.body["vertex"]
 
     def update_vertex(self, vertex_id, data, rev=None, keep_none=True,
-                      wait_for_sync=False, _batch=False):
+                      wait_for_sync=False, batch=False):
         """Update a vertex of the specified ID in this graph.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -318,14 +318,14 @@ class Graph(object):
             params["rev"] = rev
         elif "_rev" in data:
             params["rev"] = data["_rev"]
-        if _batch:
+        if batch:
             return {
                 "method": "patch",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.patch(path=path, data=data, params=params)
+        res = self.api.patch(endpoint=path, data=data, params=params)
         if res.status_code == 412:
             raise VertexRevisionError(res)
         elif res.status_code not in {200, 202}:
@@ -333,7 +333,7 @@ class Graph(object):
         return res.body["vertex"]
 
     def replace_vertex(self, vertex_id, data, rev=None, wait_for_sync=False,
-                       _batch=False):
+                       batch=False):
         """Replace a vertex of the specified ID in this graph.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -360,14 +360,14 @@ class Graph(object):
             params["rev"] = rev
         if "_rev" in data:
             params["rev"] = data["_rev"]
-        if _batch:
+        if batch:
             return {
                 "method": "put",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.put(path=path, params=params, data=data)
+        res = self.api.put(endpoint=path, params=params, data=data)
         if res.status_code == 412:
             raise VertexRevisionError(res)
         elif res.status_code not in {200, 202}:
@@ -375,7 +375,7 @@ class Graph(object):
         return res.body["vertex"]
 
     def delete_vertex(self, vertex_id, rev=None, wait_for_sync=False,
-                      _batch=False):
+                      batch=False):
         """Delete the vertex of the specified ID from this graph.
 
         :param vertex_id: the ID of the vertex to be deleted
@@ -388,13 +388,13 @@ class Graph(object):
         params = {"waitForSync": wait_for_sync}
         if rev is not None:
             params["rev"] = rev
-        if _batch:
+        if batch:
             return {
                 "method": "delete",
                 "path": path,
                 "params": params,
             }
-        res = self.api.delete(path=path, params=params)
+        res = self.api.delete(endpoint=path, params=params)
         if res.status_code == 412:
             raise VertexRevisionError(res)
         if res.status_code not in {200, 202}:
@@ -430,7 +430,7 @@ class Graph(object):
             raise EdgeGetError(res)
         return res.body["edge"]
 
-    def create_edge(self, collection, data, wait_for_sync=False, _batch=False):
+    def create_edge(self, collection, data, wait_for_sync=False, batch=False):
         """Create an edge to the specified edge collection of this graph.
 
         The ``data`` must contain ``_from`` and ``_to`` keys with valid
@@ -455,20 +455,20 @@ class Graph(object):
                 "the new edge data is missing the '_from' key")
         path = "/_api/gharial/{}/edge/{}".format(self.name, collection)
         params = {"waitForSync": wait_for_sync}
-        if _batch:
+        if batch:
             return {
                 "method": "post",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.post(path=path, data=data, params=params)
+        res = self.api.post(endpoint=path, data=data, params=params)
         if res.status_code not in HTTP_OK:
             raise EdgeCreateError(res)
         return res.body["edge"]
 
     def update_edge(self, edge_id, data, rev=None, keep_none=True,
-                    wait_for_sync=False, _batch=False):
+                    wait_for_sync=False, batch=False):
         """Update the edge of the specified ID in this graph.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -506,14 +506,14 @@ class Graph(object):
             params["rev"] = rev
         elif "_rev" in data:
             params["rev"] = data["_rev"]
-        if _batch:
+        if batch:
             return {
                 "method": "patch",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.patch(path=path, data=data, params=params)
+        res = self.api.patch(endpoint=path, data=data, params=params)
         if res.status_code == 412:
             raise EdgeRevisionError(res)
         elif res.status_code not in {200, 202}:
@@ -521,7 +521,7 @@ class Graph(object):
         return res.body["edge"]
 
     def replace_edge(self, edge_id, data, rev=None, wait_for_sync=False,
-                     _batch=False):
+                     batch=False):
         """Replace the edge of the specified ID in this graph.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -551,22 +551,21 @@ class Graph(object):
             params["rev"] = rev
         elif "_rev" in data:
             params["rev"] = data["_rev"]
-        if _batch:
+        if batch:
             return {
                 "method": "put",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self.api.put(path=path, params=params, data=data)
+        res = self.api.put(endpoint=path, params=params, data=data)
         if res.status_code == 412:
             raise EdgeRevisionError(res)
         elif res.status_code not in {200, 202}:
             raise EdgeReplaceError(res)
         return res.body["edge"]
 
-    def delete_edge(self, edge_id, rev=None, wait_for_sync=False,
-                    _batch=False):
+    def delete_edge(self, edge_id, rev=None, wait_for_sync=False, batch=False):
         """Delete the edge of the specified ID from this graph.
 
         :param edge_id: the ID of the edge to be deleted
@@ -577,7 +576,7 @@ class Graph(object):
         """
         path = "/_api/gharial/{}/edge/{}".format(self.name, edge_id)
         params = {"waitForSync": wait_for_sync}
-        if _batch:
+        if batch:
             return {
                 "method": "delete",
                 "path": path,
@@ -585,7 +584,7 @@ class Graph(object):
             }
         if rev is not None:
             params["rev"] = rev
-        res = self.api.delete(path=path, params=params)
+        res = self.api.delete(endpoint=path, params=params)
         if res.status_code == 412:
             raise EdgeRevisionError(res)
         elif res.status_code not in {200, 202}:

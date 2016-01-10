@@ -28,7 +28,6 @@ class Collection(object):
         """
         self.name = name
         self.api = api
-        self.type = "edge" if self.is_edge else "document"
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
@@ -89,9 +88,7 @@ class Collection(object):
         :rtype: bool
         :raises: DocumentGetError
         """
-        res = self.api.head(
-            "/_api/{}/{}/{}".format(self.type, self.name, key)
-        )
+        res = self.api.head("/_api/{}/{}/{}".format(self.type, self.name, key))
         if res.status_code == 200:
             return True
         elif res.status_code == 404:
@@ -107,9 +104,7 @@ class Collection(object):
         :rtype: dict
         :raises: CollectionGetError
         """
-        res = self.api.get(
-            "/_api/collection/{}/properties".format(self.name)
-        )
+        res = self.api.get("/_api/collection/{}/properties".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionGetError(res)
         return {
@@ -226,9 +221,7 @@ class Collection(object):
         :rtype: dict
         :raises: CollectionGetError
         """
-        res = self.api.get(
-            "/_api/collection/{}/figures".format(self.name)
-        )
+        res = self.api.get("/_api/collection/{}/figures".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionGetError(res)
         return uncamelify(res.body["figures"])
@@ -241,9 +234,7 @@ class Collection(object):
         :rtype: str
         :raises: CollectionGetError
         """
-        res = self.api.get(
-            "/_api/collection/{}/revision".format(self.name)
-        )
+        res = self.api.get("/_api/collection/{}/revision".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionGetError(res)
         return res.body["revision"]
@@ -255,9 +246,7 @@ class Collection(object):
         :rtype: str
         :raises: CollectionLoadError
         """
-        res = self.api.put(
-            "/_api/collection/{}/load".format(self.name)
-        )
+        res = self.api.put("/_api/collection/{}/load".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionLoadError(res)
         return COLLECTION_STATUSES.get(
@@ -272,9 +261,7 @@ class Collection(object):
         :rtype: str
         :raises: CollectionUnloadError
         """
-        res = self.api.put(
-            "/_api/collection/{}/unload".format(self.name)
-        )
+        res = self.api.put("/_api/collection/{}/unload".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionUnloadError(res)
         return COLLECTION_STATUSES.get(
@@ -287,9 +274,7 @@ class Collection(object):
 
         :raises: CollectionRotateJournalError
         """
-        res = self.api.put(
-            "/_api/collection/{}/rotate".format(self.name)
-        )
+        res = self.api.put("/_api/collection/{}/rotate".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionRotateJournalError(res)
         return res.body["result"]
@@ -351,7 +336,7 @@ class Collection(object):
         :raises: DocumentRevisionError, DocumentGetError
         """
         res = self.api.get(
-            "/_api/{}/{}/{}".format(self.type, self.name, key),
+            "/_api/document/{}/{}".format(self.name, key),
             headers={
                 "If-Match" if match else "If-None-Match": rev
             } if rev else {}
@@ -364,12 +349,10 @@ class Collection(object):
             raise DocumentGetError(res)
         return res.body
 
-    def create_document(self, data, wait_for_sync=False, _batch=False):
+    def create_document(self, data, wait_for_sync=False):
         """Create a new document to this collection.
 
-        If ``data`` contains the ``_key`` key, its value must be free.
-        If this collection is an edge collection, ``data`` must contain the
-        ``_from`` and ``_to`` keys with valid vertex IDs as their values.
+        If ``data`` contains the ``_key`` key, its value must be available.
 
         :param data: the body of the new document
         :type data: dict
@@ -379,36 +362,25 @@ class Collection(object):
         :rtype: dict
         :raises: DocumentInvalidError, DocumentCreateError
         """
-        if self.type is "edge":
-            if "_to" not in data:
-                raise DocumentInvalidError(
-                    "the new document data is missing the '_to' key")
-            if "_from" not in data:
-                raise DocumentInvalidError(
-                    "the new document data is missing the '_from' key")
-        path = "/_api/{}".format(self.type)
+        endpoint = "/_api/document"
         params = {
             "collection": self.name,
             "waitForSync": wait_for_sync,
         }
-        if "_from" in data:
-            params["from"] = data["_from"]
-        if "_to" in data:
-            params["to"] = data["_to"]
-        if _batch:
+        if getattr(self.create_document, 'batch', False):
             return {
                 "method": "post",
-                "path": path,
+                "endpoint": endpoint,
                 "data": data,
-                "params": params,
+                "params": params
             }
-        res = self.api.post(path=path, data=data, params=params)
+        res = self.api.post(endpoint=endpoint, data=data, params=params)
         if res.status_code not in HTTP_OK:
             raise DocumentCreateError(res)
         return res.body
 
     def update_document(self, key, data, rev=None, keep_none=True,
-                        wait_for_sync=False, _batch=False):
+                        wait_for_sync=False):
         """Update the specified document in this collection.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -437,7 +409,7 @@ class Collection(object):
         :rtype: dict
         :raises: DocumentUpdateError
         """
-        path = "/_api/{}/{}/{}".format(self.type, self.name, key)
+        endpoint = "/_api/{}/{}/{}".format(self.type, self.name, key)
         params = {
             "waitForSync": wait_for_sync,
             "keepNull": keep_none
@@ -448,14 +420,14 @@ class Collection(object):
         elif "_rev" in data:
             params["rev"] = data["_rev"]
             params["policy"] = "error"
-        if _batch:
+        if getattr(self.update_document, 'batch', False):
             return {
                 "method": "patch",
-                "path": path,
+                "path": endpoint,
                 "data": data,
                 "params": params,
             }
-        res = self.api.patch(path=path, data=data, params=params)
+        res = self.api.patch(endpoint=endpoint, data=data, params=params)
         if res.status_code == 412:
             raise DocumentRevisionError(res)
         if res.status_code not in HTTP_OK:
@@ -463,8 +435,7 @@ class Collection(object):
         del res.body["error"]
         return res.body
 
-    def replace_document(self, key, data, rev=None, wait_for_sync=False,
-                         _batch=False):
+    def replace_document(self, key, data, rev=None, wait_for_sync=False):
         """Replace the specified document in this collection.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -488,6 +459,7 @@ class Collection(object):
         :rtype: dict
         :raises: DocumentReplaceError
         """
+        endpoint = "/_api/{}/{}/{}".format(self.type, self.name, key)
         params = {"waitForSync": wait_for_sync}
         if rev is not None:
             params["rev"] = rev
@@ -495,15 +467,14 @@ class Collection(object):
         elif "_rev" in data:
             params["rev"] = data["_rev"]
             params["policy"] = "error"
-        path = "/_api/{}/{}/{}".format(self.type, self.name, key)
-        if _batch:
+        if getattr(self.replace_document, 'batch', False):
             return {
                 "method": "put",
-                "path": path,
+                "endpoint": endpoint,
                 "data": data,
                 "params": params,
             }
-        res = self.api.put(path=path, params=params, data=data)
+        res = self.api.put(endpoint=endpoint, params=params, data=data)
         if res.status_code == 412:
             raise DocumentRevisionError(res)
         elif res.status_code not in HTTP_OK:
@@ -511,8 +482,7 @@ class Collection(object):
         del res.body["error"]
         return res.body
 
-    def delete_document(self, key, rev=None, wait_for_sync=False,
-                        _batch=False):
+    def delete_document(self, key, rev=None, wait_for_sync=False):
         """Delete the specified document from this collection.
 
         :param key: the key of the document to be deleted
@@ -525,18 +495,18 @@ class Collection(object):
         :rtype: dict
         :raises: DocumentRevisionError, DocumentDeleteError
         """
+        endpoint = "/_api/{}/{}/{}".format(self.type, self.name, key)
         params = {"waitForSync": wait_for_sync}
         if rev is not None:
             params["rev"] = rev
             params["policy"] = "error"
-        path = "/_api/{}/{}/{}".format(self.type, self.name, key)
-        if _batch:
+        if getattr(self.delete_document, 'batch', False):
             return {
                 "method": "delete",
-                "path": path,
+                "endpoint": endpoint,
                 "params": params
             }
-        res = self.api.delete(path=path, params=params)
+        res = self.api.delete(endpoint=endpoint, params=params)
         if res.status_code == 412:
             raise DocumentRevisionError(res)
         elif res.status_code not in {200, 202}:

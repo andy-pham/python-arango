@@ -9,14 +9,13 @@ from arango.clients.base import BaseClient
 class DefaultClient(BaseClient):
     """Session based HTTP (default) client for ArangoDB."""
 
-    def __init__(self, init_data):
+    def __init__(self):
         """Initialize the session with the credentials.
 
         :param init_data: data for client initialization
         :type init_data: dict
         """
         self.session = Session()
-        self.session.auth = init_data["auth"]
 
     def head(self, url, params=None, headers=None, auth=None):
         """HTTP HEAD method.
@@ -36,6 +35,7 @@ class DefaultClient(BaseClient):
             url=url,
             params=params,
             headers=headers,
+            auth=auth,
         )
         return Response(
             method="head",
@@ -64,6 +64,7 @@ class DefaultClient(BaseClient):
             url=url,
             params=params,
             headers=headers,
+            auth=auth,
         )
         return Response(
             method="get",
@@ -95,6 +96,7 @@ class DefaultClient(BaseClient):
             data=data,
             params=params,
             headers=headers,
+            auth=auth,
         )
         return Response(
             method="put",
@@ -126,6 +128,7 @@ class DefaultClient(BaseClient):
             data="" if data is None else data,
             params={} if params is None else params,
             headers={} if headers is None else headers,
+            auth=auth,
         )
         return Response(
             method="post",
@@ -157,6 +160,7 @@ class DefaultClient(BaseClient):
             data=data,
             params=params,
             headers=headers,
+            auth=auth,
         )
         return Response(
             method="patch",
@@ -217,6 +221,7 @@ class DefaultClient(BaseClient):
             data="" if data is None else data,
             params={} if params is None else params,
             headers={} if headers is None else headers,
+            auth=auth,
         )
         return Response(
             method="options",

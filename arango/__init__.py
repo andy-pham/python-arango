@@ -35,7 +35,7 @@ class Arango(object):
         :type password: str
         :param client: HTTP client for this wrapper to use
         :type client: arango.clients.base.BaseClient or None
-        :raises: ConnectionError
+        :raises: ArangoConnectionError
         """
         self.protocol = protocol
         self.host = host
@@ -47,8 +47,7 @@ class Arango(object):
         if client is not None:
             self.client = client
         else:
-            client_init_data = {"auth": (self.username, self.password)}
-            self.client = DefaultClient(client_init_data)
+            self.client = DefaultClient()
 
         # Initialize the ArangoDB API wrapper object
         self.api = API(
@@ -63,7 +62,7 @@ class Arango(object):
         # Check the connection by requesting a header
         res = self.api.head("/_api/version")
         if res.status_code not in HTTP_OK:
-            raise ConnectionError(res)
+            raise ArangoConnectionError(res)
 
         # Default ArangoDB database wrapper object
         self._default_database = Database(DEFAULT_DATABASE, self.api)
@@ -613,7 +612,7 @@ class Arango(object):
         """
         res = self.api.post("/_admin/routing/reload")
         if res.status_code not in HTTP_OK:
-            raise RountingInfoReloadError(res)
+            raise RoutingInfoReloadError(res)
 
     @property
     def statistics(self):

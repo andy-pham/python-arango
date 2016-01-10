@@ -1,4 +1,4 @@
-"""Global constants."""
+"""Global constants used throughout python-arango."""
 
 # Name of the default ArangoDB database
 DEFAULT_DATABASE = "_system"

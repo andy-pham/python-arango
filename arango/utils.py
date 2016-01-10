@@ -98,13 +98,13 @@ def filter_keys(dictionary, filtered):
     return {k: v for k, v in dictionary.items() if k not in filtered}
 
 
-def stringify_request(method, path, params=None, headers=None, data=None):
+def stringify_request(method, endpoint, params=None, headers=None, data=None):
     """Stringify the HTTP request into a string for batch requests.
 
     :param method: the HTTP method
     :type method: str
-    :param path: the API path (e.g. '/_api/version')
-    :type path: str
+    :param endpoint: the API endpoint (e.g. '/_api/version')
+    :type endpoint: str
     :param params: the request parameters
     :type params: dict or None
     :param headers: the request headers
@@ -115,13 +115,11 @@ def stringify_request(method, path, params=None, headers=None, data=None):
     :rtype: str
     """
     if params is not None:
-        path += "?" + urllib.urlencode(params)
-    request_string = "{} {} HTTP/1.1".format(method, path)
-    if headers:
+        endpoint += "?" + urllib.urlencode(params)
+    request_string = "{} {} HTTP/1.1".format(method, endpoint)
+    if headers is not None:
         for key, value in headers.items():
-            request_string += "\r\n{key}: {value}".format(
-                key=key, value=value
-            )
-    if data:
+            request_string += "\r\n{}: {}".format(key, value)
+    if data is not None:
         request_string += "\r\n\r\n{}".format(dumps(data))
     return request_string

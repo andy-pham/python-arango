@@ -3,7 +3,6 @@
 import json
 import inspect
 
-
 from arango.utils import uncamelify, stringify_request
 from arango.graph import Graph
 from arango.collection import Collection
@@ -328,7 +327,9 @@ class Database(object):
         res = self.api.post("/_api/collection", data=data)
         if res.status_code not in HTTP_OK:
             raise CollectionCreateError(res)
-        self._refresh_collection_cache()
+        self._collection_cache[name] = Collection(
+            name=name, api=self.api, is_edge=is_edge
+        )
         return self.collection(name)
 
     def delete_collection(self, name):
@@ -402,7 +403,6 @@ class Database(object):
         :type requests: list
         :raises: BatchInvalidError, BatchExecuteError
         """
-
         data = ""
         for content_id, request in enumerate(requests, start=1):
             try:
@@ -411,12 +411,12 @@ class Database(object):
                 raise BatchInvalidError(
                     "pos {}: malformed request".format(content_id)
                 )
-            if "_batch" not in inspect.getargspec(func)[0]:
+            if "batch" not in inspect.getargspec(func)[0]:
                 raise BatchInvalidError(
                     "pos {}: ArangoDB method '{}' does not support "
                     "batch execution".format(content_id, func.__name__)
                 )
-            kwargs["_batch"] = True
+            kwargs["batch"] = True
             res = func(*args, **kwargs)
             data += "--XXXsubpartXXX\r\n"
             data += "Content-Type: application/x-arango-batchpart\r\n"
@@ -425,19 +425,20 @@ class Database(object):
         data += "--XXXsubpartXXX--\r\n\r\n"
         res = self.api.post(
             "/_api/batch",
+            data=data,
             headers={
                 "Content-Type": "multipart/form-data; boundary=XXXsubpartXXX"
             },
-            data=data,
         )
         if res.status_code not in HTTP_OK:
             raise BatchExecuteError(res)
         if res.body is None:
             return []
-        return [
-            json.loads(string) for string in res.body.split("\r\n") if
-            string.startswith("{") and string.endswith("}")
-        ]
+        else:
+            return [
+                json.loads(string) for string in res.body.split("\r\n") if
+                string.startswith("{") and string.endswith("}")
+            ]
 
     #################
     # AQL Functions #
@@ -537,7 +538,7 @@ class Database(object):
             "waitForSync": wait_for_sync,
             "lockTimeout": lock_timeout,
         }
-        res = self.api.post(path=path, data=data, params=http_params)
+        res = self.api.post(endpoint=path, data=data, params=http_params)
         if res.status_code not in HTTP_OK:
             raise TransactionExecuteError(res)
         return res.body["result"]

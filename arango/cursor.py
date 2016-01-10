@@ -8,7 +8,7 @@ from arango.exceptions import (
 
 
 def cursor(api, response):
-    """Continuously read from the server cursor and yield the result.
+    """Continuously read from the server cursor and yielding each item.
 
     :param api: ArangoDB API wrapper object
     :type api: arango.api.API
