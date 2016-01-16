@@ -44,14 +44,14 @@ class BatchRequestTest(unittest.TestCase):
 
     def test_batch_document_create(self):
         self.db.execute_batch([
-            (self.col.create_document, [{"_key": "doc01", "value": 1}], {}),
-            (self.col.create_document, [{"_key": "doc02", "value": 2}], {}),
-            (self.col.create_document, [{"_key": "doc03", "value": 3}], {}),
+            (self.col.insert, [{"_key": "doc01", "value": 1}], {}),
+            (self.col.insert, [{"_key": "doc02", "value": 2}], {}),
+            (self.col.insert, [{"_key": "doc03", "value": 3}], {}),
         ])
         self.assertEqual(len(self.col), 3)
-        self.assertEqual(self.col.document("doc01")["value"], 1)
-        self.assertEqual(self.col.document("doc02")["value"], 2)
-        self.assertEqual(self.col.document("doc03")["value"], 3)
+        self.assertEqual(self.col.get("doc01")["value"], 1)
+        self.assertEqual(self.col.get("doc02")["value"], 2)
+        self.assertEqual(self.col.get("doc03")["value"], 3)
 
     def test_batch_document_replace(self):
         self.col.import_documents([
@@ -64,9 +64,9 @@ class BatchRequestTest(unittest.TestCase):
             (self.col.replace_document, ["doc02", {"value": 2}], {}),
             (self.col.replace_document, ["doc03", {"value": 2}], {}),
         ])
-        self.assertEqual(self.col.document("doc01")["value"], 2)
-        self.assertEqual(self.col.document("doc02")["value"], 2)
-        self.assertEqual(self.col.document("doc03")["value"], 2)
+        self.assertEqual(self.col.get("doc01")["value"], 2)
+        self.assertEqual(self.col.get("doc02")["value"], 2)
+        self.assertEqual(self.col.get("doc03")["value"], 2)
 
     def test_batch_document_update(self):
         self.col.import_documents([
@@ -76,24 +76,24 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.col.update_document,
+                self.col.update,
                 ["doc01", {"value": 2}],
                 {"wait_for_sync": True}
             ),
             (
-                self.col.update_document,
+                self.col.update,
                 ["doc02", {"value": 2}],
                 {"wait_for_sync": True}
             ),
             (
-                self.col.update_document,
+                self.col.update,
                 ["doc03", {"value": 2}],
                 {"wait_for_sync": True}
             ),
         ])
-        self.assertEqual(self.col.document("doc01")["value"], 2)
-        self.assertEqual(self.col.document("doc02")["value"], 2)
-        self.assertEqual(self.col.document("doc03")["value"], 2)
+        self.assertEqual(self.col.get("doc01")["value"], 2)
+        self.assertEqual(self.col.get("doc02")["value"], 2)
+        self.assertEqual(self.col.get("doc03")["value"], 2)
 
     def test_batch_document_Delete(self):
         self.col.import_documents([
@@ -116,12 +116,12 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.col.create_document,
+                self.col.insert,
                 [{"_key": "doc04", "value": 1}],
                 {"wait_for_sync": True}
             ),
             (
-                self.col.update_document,
+                self.col.update,
                 ["doc01", {"value": 2}],
                 {"wait_for_sync": True}
             ),
@@ -136,17 +136,17 @@ class BatchRequestTest(unittest.TestCase):
                 {"wait_for_sync": True}
             ),
             (
-                self.col.create_document,
+                self.col.insert,
                 [{"_key": "doc05", "value": 5}],
                 {"wait_for_sync": True}
             ),
         ])
         self.assertEqual(len(self.col), 4)
-        self.assertEqual(self.col.document("doc01")["value"], 2)
-        self.assertEqual(self.col.document("doc02")["new_value"], 3)
+        self.assertEqual(self.col.get("doc01")["value"], 2)
+        self.assertEqual(self.col.get("doc02")["new_value"], 3)
         self.assertNotIn("doc03", self.col)
-        self.assertEqual(self.col.document("doc04")["value"], 1)
-        self.assertEqual(self.col.document("doc05")["value"], 5)
+        self.assertEqual(self.col.get("doc04")["value"], 1)
+        self.assertEqual(self.col.get("doc05")["value"], 5)
 
     def test_batch_vertex_create(self):
         self.db.execute_batch([
@@ -166,9 +166,9 @@ class BatchRequestTest(unittest.TestCase):
                 {"wait_for_sync": True}
             ),
         ])
-        self.assertEqual(self.vertex_col.document("v01")["value"], 1)
-        self.assertEqual(self.vertex_col.document("v02")["value"], 2)
-        self.assertEqual(self.vertex_col.document("v03")["value"], 3)
+        self.assertEqual(self.vertex_col.get("v01")["value"], 1)
+        self.assertEqual(self.vertex_col.get("v02")["value"], 2)
+        self.assertEqual(self.vertex_col.get("v03")["value"], 3)
 
     def test_batch_vertex_replace(self):
         self.vertex_col.import_documents([
@@ -202,9 +202,9 @@ class BatchRequestTest(unittest.TestCase):
                 {"wait_for_sync": True}
             ),
         ])
-        self.assertEqual(self.vertex_col.document("v01")["new_val"], 2)
-        self.assertEqual(self.vertex_col.document("v02")["new_val"], 3)
-        self.assertEqual(self.vertex_col.document("v03")["new_val"], 4)
+        self.assertEqual(self.vertex_col.get("v01")["new_val"], 2)
+        self.assertEqual(self.vertex_col.get("v02")["new_val"], 3)
+        self.assertEqual(self.vertex_col.get("v03")["new_val"], 4)
 
     def test_batch_vertex_update(self):
         self.vertex_col.import_documents([
@@ -229,9 +229,9 @@ class BatchRequestTest(unittest.TestCase):
                 {"wait_for_sync": True}
             ),
         ])
-        self.assertEqual(self.vertex_col.document("v01")["value"], 2)
-        self.assertEqual(self.vertex_col.document("v02")["value"], 3)
-        self.assertEqual(self.vertex_col.document("v03")["value"], 4)
+        self.assertEqual(self.vertex_col.get("v01")["value"], 2)
+        self.assertEqual(self.vertex_col.get("v02")["value"], 3)
+        self.assertEqual(self.vertex_col.get("v03")["value"], 4)
 
     def test_batch_vertex_Delete(self):
         self.vertex_col.import_documents([
@@ -290,8 +290,8 @@ class BatchRequestTest(unittest.TestCase):
                 }
             ),
         ])
-        self.assertEqual(self.edge_col.document("e01")["value"], 4)
-        self.assertEqual(self.edge_col.document("e02")["value"], 5)
+        self.assertEqual(self.edge_col.get("e01")["value"], 4)
+        self.assertEqual(self.edge_col.get("e02")["value"], 5)
 
     def test_batch_edge_replace(self):
         self.vertex_col.import_documents([
@@ -337,8 +337,8 @@ class BatchRequestTest(unittest.TestCase):
                 {"data": {"new_val": 2}}
             ),
         ])
-        self.assertEqual(self.edge_col.document("e01")["new_val"], 1)
-        self.assertEqual(self.edge_col.document("e02")["new_val"], 2)
+        self.assertEqual(self.edge_col.get("e01")["new_val"], 1)
+        self.assertEqual(self.edge_col.get("e02")["new_val"], 2)
 
     def test_batch_edge_update(self):
         self.vertex_col.import_documents([
@@ -384,8 +384,8 @@ class BatchRequestTest(unittest.TestCase):
                 {"data": {"value": 2}}
             ),
         ])
-        self.assertEqual(self.edge_col.document("e01")["value"], 1)
-        self.assertEqual(self.edge_col.document("e02")["value"], 2)
+        self.assertEqual(self.edge_col.get("e01")["value"], 1)
+        self.assertEqual(self.edge_col.get("e02")["value"], 2)
 
     def test_batch_edge_Delete(self):
         self.vertex_col.import_documents([

@@ -77,7 +77,7 @@ class Collection(object):
         """
         if not isinstance(key, str):
             raise TypeError("Expecting a str.")
-        return self.document(key)
+        return self.get(key)
 
     def __contains__(self, key):
         """Return True if the document exists in this collection.
@@ -303,9 +303,7 @@ class Collection(object):
 
         :raises: CollectionTruncateError
         """
-        res = self.api.put(
-            "/_api/collection/{}/truncate".format(self.name)
-        )
+        res = self.api.put("/_api/collection/{}/truncate".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionTruncateError(res)
 
@@ -313,11 +311,7 @@ class Collection(object):
     # Document Management #
     #######################
 
-    def doc(self, key, rev=None, match=True):
-        """Alias for self.document."""
-        return self.document(key, rev, match)
-
-    def document(self, key, rev=None, match=True):
+    def get(self, key, rev=None, match=True):
         """Return the document of the given key.
 
         If the document revision ``rev`` is specified, it is compared
@@ -349,8 +343,8 @@ class Collection(object):
             raise DocumentGetError(res)
         return res.body
 
-    def create_document(self, data, wait_for_sync=False):
-        """Create a new document to this collection.
+    def insert(self, data, wait_for_sync=False, batch=True, async=True):
+        """Insert a new document to this collection.
 
         If ``data`` contains the ``_key`` key, its value must be available.
 
@@ -363,24 +357,27 @@ class Collection(object):
         :raises: DocumentInvalidError, DocumentCreateError
         """
         endpoint = "/_api/document"
-        params = {
-            "collection": self.name,
-            "waitForSync": wait_for_sync,
-        }
-        if getattr(self.create_document, 'batch', False):
+        params = {"collection": self.name, "waitForSync": wait_for_sync}
+
+
+        if batch:
             return {
                 "method": "post",
                 "endpoint": endpoint,
                 "data": data,
-                "params": params
+                "params": params,
+                "headers": headers
             }
-        res = self.api.post(endpoint=endpoint, data=data, params=params)
+        res = self.api.post(
+            endpoint=endpoint,
+            data=data,
+            params=params
+        )
         if res.status_code not in HTTP_OK:
             raise DocumentCreateError(res)
         return res.body
 
-    def update_document(self, key, data, rev=None, keep_none=True,
-                        wait_for_sync=False):
+    def update(self, key, data, rev=None, keep_none=True, wait_for_sync=False):
         """Update the specified document in this collection.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -420,7 +417,7 @@ class Collection(object):
         elif "_rev" in data:
             params["rev"] = data["_rev"]
             params["policy"] = "error"
-        if getattr(self.update_document, 'batch', False):
+        if getattr(self.update, 'batch', False):
             return {
                 "method": "patch",
                 "path": endpoint,

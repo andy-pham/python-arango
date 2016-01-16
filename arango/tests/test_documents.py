@@ -31,12 +31,12 @@ class DocumentManagementTest(unittest.TestCase):
 
     def test_create_document(self):
         self.assertEqual(len(self.col), 0)
-        self.col.create_document({"_key": "test_doc"})
+        self.col.insert({"_key": "test_doc"})
         self.assertEqual(len(self.col), 1)
         self.assertIn("test_doc", self.col)
 
     def test_delete_document(self):
-        rev = self.col.create_document({"_key": "test_doc"})["_rev"]
+        rev = self.col.insert({"_key": "test_doc"})["_rev"]
         self.assertEqual(len(self.col), 1)
         self.assertRaises(
             DocumentDeleteError,
@@ -49,7 +49,7 @@ class DocumentManagementTest(unittest.TestCase):
         self.assertNotIn("test_doc", self.col)
 
     def test_replace_document(self):
-        rev = self.col.create_document({
+        rev = self.col.insert({
             "_key": "test_doc",
             "value": 1,
             "value2": 2,
@@ -68,18 +68,18 @@ class DocumentManagementTest(unittest.TestCase):
         self.assertNotIn("value2", self.col["test_doc"])
 
     def test_update_document(self):
-        rev = self.col.create_document({
+        rev = self.col.insert({
             "_key": "test_doc",
             "value": 1,
             "value2": 2,
         })["_rev"]
         self.assertRaises(
             DocumentUpdateError,
-            self.col.update_document,
+            self.col.update,
             "test_doc",
             {"_rev": "wrong_revision", "value": 2},
         )
-        self.col.update_document(
+        self.col.update(
             "test_doc",
             {"_rev": rev, "new_value": 2}
         )
@@ -87,9 +87,9 @@ class DocumentManagementTest(unittest.TestCase):
         self.assertEqual(self.col["test_doc"]["new_value"], 2)
 
     def test_truncate(self):
-        self.col.create_document({"_key": "test_doc_01"})
-        self.col.create_document({"_key": "test_doc_02"})
-        self.col.create_document({"_key": "test_doc_03"})
+        self.col.insert({"_key": "test_doc_01"})
+        self.col.insert({"_key": "test_doc_02"})
+        self.col.insert({"_key": "test_doc_03"})
         self.assertEqual(len(self.col), 3)
         self.col.truncate()
         self.assertEqual(len(self.col), 0)
