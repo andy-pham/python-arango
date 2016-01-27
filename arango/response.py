@@ -20,14 +20,22 @@ class Response(object):
     :type status_text: str or None
     """
 
-    def __init__(self, method, url, status_code, content, headers,
-                 status_text=None):
+    __slots__ = (
+        'method',
+        'url',
+        'headers',
+        'status_code',
+        'status_text',
+        'body'
+    )
+
+    def __init__(self, method, url, headers, status_code, status_text, text):
         self.method = method
         self.url = url
-        self.status_code = status_code
         self.headers = headers
+        self.status_code = status_code
         self.status_text = status_text
         try:
-            self.body = loads(content) if content else None
+            self.body = loads(text) if text else None
         except ValueError:
             self.body = None

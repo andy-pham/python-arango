@@ -6,7 +6,7 @@ from arango import Arango
 from arango.exceptions import (
     CollectionRotateJournalError,
 )
-from arango.utils import is_string
+from arango.utils import is_str
 from arango.tests.utils import (
     generate_col_name,
     generate_db_name
@@ -22,7 +22,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.db = self.arango.create_database(self.db_name)
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_create_collection(self):
@@ -90,7 +90,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.assertFalse(col.is_compacted)
         self.assertTrue(col.wait_for_sync)
         self.assertTrue(col.is_edge)
-        self.assertTrue(is_string(col.id))
+        self.assertTrue(is_str(col.id))
         self.assertTrue(isinstance(col.statistics, dict))
 
     def test_collection_setters(self):

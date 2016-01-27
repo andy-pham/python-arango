@@ -23,7 +23,7 @@ class IndexManagementTest(unittest.TestCase):
         self.col = self.db.create_collection(self.col_name)
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_list_indexes(self):

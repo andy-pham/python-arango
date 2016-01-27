@@ -24,7 +24,7 @@ class SimpleQueriesTest(unittest.TestCase):
         self.col.create_fulltext_index(["text"])
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_first(self):

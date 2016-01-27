@@ -3,7 +3,7 @@
 import json
 import inspect
 
-from arango.utils import uncamelify, stringify_request
+from arango.utils import uncamelify
 from arango.graph import Graph
 from arango.collection import Collection
 from arango.cursor import cursor
@@ -19,7 +19,7 @@ class Database(object):
     2. AQL Queries
     3. Batch Requests
     4. AQL Functions
-    5. Transaction
+    5. TransactionStep
     6. Graph Management
     """
 
@@ -28,8 +28,8 @@ class Database(object):
 
         :param name: the name of this database
         :type name: str
-        :param api: ArangoDB API object
-        :type api: arango.api.API
+        :param api: ArangoDB Connection object
+        :type api: arango.connection.Connection
         """
         self.name = name
         self.api = api
@@ -396,32 +396,19 @@ class Database(object):
     # Batch Requests #
     ##################
 
-    def execute_batch(self, requests):
-        """Execute ArangoDB API calls in a batch.
+    def execute_batch(self, batch_steps):
+        """Execute ArangoDB Connection calls in a batch.
 
-        :param requests: ArangoDB requests
-        :type requests: list
+        :param batch_steps: ArangoDB requests
+        :type batch_steps: list
         :raises: BatchInvalidError, BatchExecuteError
         """
         data = ""
-        for content_id, request in enumerate(requests, start=1):
-            try:
-                func, args, kwargs = request
-            except (TypeError, ValueError):
-                raise BatchInvalidError(
-                    "pos {}: malformed request".format(content_id)
-                )
-            if "batch" not in inspect.getargspec(func)[0]:
-                raise BatchInvalidError(
-                    "pos {}: ArangoDB method '{}' does not support "
-                    "batch execution".format(content_id, func.__name__)
-                )
-            kwargs["batch"] = True
-            res = func(*args, **kwargs)
+        for content_id, batch_step in enumerate(batch_steps, start=1):
             data += "--XXXsubpartXXX\r\n"
             data += "Content-Type: application/x-arango-batchpart\r\n"
             data += "Content-Id: {}\r\n\r\n".format(content_id)
-            data += "{}\r\n".format(stringify_request(**res))
+            data += "{}\r\n".format(batch_step)
         data += "--XXXsubpartXXX--\r\n\r\n"
         res = self.api.post(
             "/_api/batch",

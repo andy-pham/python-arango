@@ -1,5 +1,4 @@
 """ArangoDB Collection."""
-
 import json
 
 from arango.utils import camelify, uncamelify
@@ -23,8 +22,8 @@ class Collection(object):
 
         :param name: the name of this collection
         :type name: str
-        :param api: ArangoDB API object
-        :type api: arango.api.API
+        :param api: ArangoDB Connection object
+        :type api: arango.connection.Connection
         """
         self.name = name
         self.api = api
@@ -44,9 +43,7 @@ class Collection(object):
         :rtype: int
         :raises: CollectionGetError
         """
-        res = self.api.get(
-            "/_api/collection/{}/count".format(self.name)
-        )
+        res = self.api.get("/_api/collection/{}/count".format(self.name))
         if res.status_code not in HTTP_OK:
             raise CollectionGetError(res)
         return res.body["count"]
@@ -112,8 +109,7 @@ class Collection(object):
             "name": res.body["name"],
             "is_edge": res.body["type"] == 3,
             "status": COLLECTION_STATUSES.get(
-                res.body["status"],
-                "corrupted ({})".format(res.body["status"])
+                res.body["status"], "corrupted ({})".format(res.body["status"])
             ),
             "do_compact": res.body["doCompact"],
             "is_system": res.body["isSystem"],
@@ -312,12 +308,13 @@ class Collection(object):
     #######################
 
     def get(self, key, rev=None, match=True):
-        """Return the document of the given key.
+        """Return the document with the given key.
 
-        If the document revision ``rev`` is specified, it is compared
+        If the document revision ``rev`` is specified, the value is compared
         against the revision of the retrieved document. If ``match`` is set
-        to True and the revisions do NOT match, or if ``match`` is set to
-        False and the revisions DO match, ``DocumentRevisionError`` is thrown.
+        to True and the revisions do not match, or if ``match`` is set to False
+        and the revisions DO match, arango.exceptions.DocumentRevisionError
+        is thrown.
 
         :param key: the key of the document to retrieve
         :type key: str
@@ -325,7 +322,7 @@ class Collection(object):
         :type rev: str or None
         :param match: whether or not the revision should match
         :type match: bool
-        :returns: the requested document or None if not found
+        :returns: the requested document or None if the document is not found
         :rtype: dict or None
         :raises: DocumentRevisionError, DocumentGetError
         """
@@ -343,8 +340,8 @@ class Collection(object):
             raise DocumentGetError(res)
         return res.body
 
-    def insert(self, data, wait_for_sync=False, batch=True, async=True):
-        """Insert a new document to this collection.
+    def insert(self, data, wait_for_sync=False, async=True, batch=True):
+        """Insert a new document into this collection.
 
         If ``data`` contains the ``_key`` key, its value must be available.
 
@@ -358,8 +355,7 @@ class Collection(object):
         """
         endpoint = "/_api/document"
         params = {"collection": self.name, "waitForSync": wait_for_sync}
-
-
+        headers = {'x-arango-async': 'store'} if async else None
         if batch:
             return {
                 "method": "post",
@@ -371,7 +367,8 @@ class Collection(object):
         res = self.api.post(
             endpoint=endpoint,
             data=data,
-            params=params
+            params=params,
+            headers=headers
         )
         if res.status_code not in HTTP_OK:
             raise DocumentCreateError(res)

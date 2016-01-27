@@ -2,19 +2,14 @@
 
 import importlib
 from re import sub
-from json import dumps
 from collections import Mapping, Iterable
-try:
-    urllib = importlib.import_module('urllib.parse')
-except ImportError:
-    urllib = importlib.import_module('urllib')
 try:
     builtins = importlib.import_module('__builtin__')
 except ImportError:
     builtins = importlib.import_module('builtins')
 
 
-def is_string(obj):
+def is_str(obj):
     """Return True iff ``obj`` is an instance of str or unicode.
 
     :param obj: the object to check
@@ -34,7 +29,7 @@ def unicode_to_str(obj):
     :returns: the sanitized object
     :rtype: object
     """
-    if is_string(obj):
+    if is_str(obj):
         return str(obj)
     elif isinstance(obj, Mapping):
         return dict(map(unicode_to_str, obj.items()))
@@ -54,7 +49,7 @@ def camelify(obj):
     :returns: the camelified object
     :rtype: object
     """
-    if is_string(obj):
+    if is_str(obj):
         words = obj.split("_")
         return words[0] + "".join(word.title() for word in words[1:])
     elif isinstance(obj, Mapping):
@@ -75,7 +70,7 @@ def uncamelify(obj):
     :returns: the uncamelified object
     :rtype: object
     """
-    if is_string(obj):
+    if is_str(obj):
         return sub('(?!^)([A-Z]+)', r'_\1', obj).lower()
     elif isinstance(obj, Mapping):
         return dict(map(uncamelify, obj.items()))
@@ -96,30 +91,3 @@ def filter_keys(dictionary, filtered):
     :rtype: dict
     """
     return {k: v for k, v in dictionary.items() if k not in filtered}
-
-
-def stringify_request(method, endpoint, params=None, headers=None, data=None):
-    """Stringify the HTTP request into a string for batch requests.
-
-    :param method: the HTTP method
-    :type method: str
-    :param endpoint: the API endpoint (e.g. '/_api/version')
-    :type endpoint: str
-    :param params: the request parameters
-    :type params: dict or None
-    :param headers: the request headers
-    :type headers: dict or None
-    :param data: the request payload
-    :type data: dict or None
-    :returns: the stringified request
-    :rtype: str
-    """
-    if params is not None:
-        endpoint += "?" + urllib.urlencode(params)
-    request_string = "{} {} HTTP/1.1".format(method, endpoint)
-    if headers is not None:
-        for key, value in headers.items():
-            request_string += "\r\n{}: {}".format(key, value)
-    if data is not None:
-        request_string += "\r\n\r\n{}".format(dumps(data))
-    return request_string

@@ -71,7 +71,7 @@ class WriteAheadLogSetError(ArangoRequestError):
     """Failed to configure the write-ahead log."""
 
 
-class TimeGetError(ArangoRequestError):
+class ServerTimeGetError(ArangoRequestError):
     """Failed to return the current system time."""
 
 
@@ -455,7 +455,7 @@ class SimpleQueryError(ArangoRequestError):
 
 
 ##########################
-# Transaction Exceptions #
+# TransactionStep Exceptions #
 ##########################
 
 
@@ -468,12 +468,25 @@ class TransactionExecuteError(ArangoRequestError):
 ####################
 
 
-class BatchInvalidError(Exception):
+class BatchInvalidError(ArangoError):
     """The batch request is invalid (malformed)."""
 
 
 class BatchExecuteError(ArangoRequestError):
     """Failed to execute a batch request."""
+
+
+####################
+# Async Exceptions #
+####################
+
+
+class JobInvalidError(ArangoRequestError):
+    """Failed to get the async job ID."""
+
+
+class JobNotFoundError(ArangoRequestError):
+    """Failed to find the async job (or it was already deleted/fetched)"""
 
 
 ####################

@@ -21,8 +21,8 @@ class Graph(object):
 
         :param name: the name of the graph
         :type name: str
-        :param api: ArangoDB API object
-        :type api: arango.api.API
+        :param api: ArangoDB Connection object
+        :type api: arango.connection.Connection
         """
         self.name = name
         self.api = api
@@ -602,7 +602,7 @@ class Graph(object):
         """Execute a graph traversal and return the visited vertices.
 
         For more details on ``init``, ``filter``, ``visitor``, ``expander``
-        and ``sort`` please refer to the ArangoDB HTTP API documentation:
+        and ``sort`` please refer to the ArangoDB HTTP Connection documentation:
         https://docs.arangodb.com/HttpTraversal/README.html
 
         :param start_vertex: the ID of the start vertex

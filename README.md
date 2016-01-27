@@ -1,7 +1,7 @@
 python-arango
 =========
 
-Python Driver for ArangoDB REST API
+Python Driver for ArangoDB REST Connection
 
 Overview
 --------
@@ -33,7 +33,7 @@ Initialization
 ```python
 from arango import Arango
 
-# Initialize the API wrapper
+# Initialize the Connection wrapper
 a = Arango(host="localhost", port=8529)
 ```
 
