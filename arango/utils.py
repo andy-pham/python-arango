@@ -26,8 +26,8 @@ def is_str(obj):
     return isinstance(obj, base_str) if base_str else isinstance(obj, str)
 
 
-def unicode_to_str(obj):
-    """Convert any unicode in ``obj`` to str and return it.
+def sanitize_str(obj):
+    """Sanitize any string in ``obj``.
 
     :param obj: the object to sanitize
     :type obj: object
@@ -35,11 +35,11 @@ def unicode_to_str(obj):
     :rtype: object
     """
     if is_str(obj):
-        return str(obj)
+        return str(obj.encode('utf-8').strip())
     elif isinstance(obj, Mapping):
-        return dict(map(unicode_to_str, obj.items()))
+        return dict(map(sanitize_str, obj.items()))
     elif isinstance(obj, Iterable):
-        return type(obj)(map(unicode_to_str, obj))
+        return type(obj)(map(sanitize_str, obj))
     else:
         return obj
 

@@ -8,7 +8,7 @@ from arango.connection import Connection
 from arango.exceptions import *
 from arango.constants import HTTP_OK, LOG_LEVELS, DEFAULT_DATABASE
 from arango.clients import DefaultHTTPClient
-from arango.utils import uncamelify, unicode_to_str
+from arango.utils import uncamelify, sanitize_str
 
 
 class Arango(object):
@@ -255,9 +255,9 @@ class Arango(object):
         if res.status_code not in HTTP_OK:
             raise EchoError(res)
         return {
-            'headers': unicode_to_str(res.body['headers']),
+            'headers': sanitize_str(res.body['headers']),
             'request_type': str(res.body['requestType']),
-            'parameters': unicode_to_str(res.body['parameters'])
+            'parameters': sanitize_str(res.body['parameters'])
         }
 
     def sleep(self, seconds):
@@ -636,7 +636,7 @@ class Arango(object):
         res = self._conn.get('/_admin/log')
         if res.status_code not in HTTP_OK:
             LogGetError(res)
-        return unicode_to_str(res.body)
+        return sanitize_str(res.body)
 
     def reload_routing(self):
         """Reload the routing information from the collection ``routing``.
@@ -665,7 +665,7 @@ class Arango(object):
             raise StatisticsGetError(res)
         res.body.pop('code', None)
         res.body.pop('error', None)
-        return unicode_to_str(res.body)
+        return sanitize_str(res.body)
 
     def role(self):
         """Return the role of the server in the cluster if applicable
