@@ -22,7 +22,7 @@ class Collection(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
+        :type connection: arango.client.Client
         :param name: the name of this collection
         :type name: str
         """
@@ -602,7 +602,7 @@ class Collection(object):
         :type ttl: int or None
         :param restrict: object with attributes to be excluded/included
         :type restrict: dict
-        :return: the generator of documents in this collection
+        :returns: the generator of documents in this collection
         :rtype: generator
         :raises: DocumentsExportError
         """

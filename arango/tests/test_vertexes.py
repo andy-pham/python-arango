@@ -38,7 +38,7 @@ class VertexManagementTest(unittest.TestCase):
             }],
         )
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_create_vertex(self):

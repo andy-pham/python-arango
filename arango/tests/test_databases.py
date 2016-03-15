@@ -17,7 +17,7 @@ class DatabaseManagementTest(unittest.TestCase):
         self.db_name = generate_db_name(self.arango)
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_database_create_and_delete(self):
@@ -25,18 +25,18 @@ class DatabaseManagementTest(unittest.TestCase):
         self.assertIn(self.db_name, self.arango.list_databases())
 
         # Check the properties of the new database
-        self.assertEqual(self.arango.database(self.db_name)._name,
+        self.assertEqual(self.arango.db(self.db_name).name,
                          self.db_name)
-        self.assertEqual(self.arango.database(self.db_name).is_system, False)
+        self.assertEqual(self.arango.db(self.db_name).is_system, False)
 
         # Delete the test database
-        self.arango.delete_database(self.db_name)
+        self.arango.drop_database(self.db_name)
         self.assertNotIn(self.db_name, self.arango.list_databases())
 
     def test_database_properties(self):
-        db = self.arango.database("_system")
-        self.assertEqual(db._name, "_system")
-        self.assertTrue(isinstance(db.properties(), dict))
+        db = self.arango.db("_system")
+        self.assertEqual(db.name, "_system")
+        self.assertTrue(isinstance(db.get_properties(), dict))
         self.assertTrue(is_str(db.id))
         self.assertTrue(is_str(db.file_path))
         self.assertEqual(db.is_system, True)

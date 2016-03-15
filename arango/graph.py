@@ -20,7 +20,7 @@ class Graph(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
+        :type connection: arango.client.Client
         :param name: the name of this graph
         :type name: str
         """
@@ -264,7 +264,7 @@ class Graph(object):
         :type data: dict
         :param wait_for_sync: wait for the create to sync to disk
         :type wait_for_sync: bool
-        :return: the id, rev and key of the new vertex
+        :returns: the id, rev and key of the new vertex
         :rtype: dict
         :raises: VertexCreateError
         """
@@ -305,7 +305,7 @@ class Graph(object):
         :type keep_none: bool
         :param wait_for_sync: wait for the update to sync to disk
         :type wait_for_sync: bool
-        :return: the id, rev and key of the updated vertex
+        :returns: the id, rev and key of the updated vertex
         :rtype: dict
         :raises: VertexRevisionError, VertexUpdateError
         """
@@ -350,7 +350,7 @@ class Graph(object):
         :type rev: str or None
         :param wait_for_sync: wait for replace to sync to disk
         :type wait_for_sync: bool
-        :return: the id, rev and key of the replaced vertex
+        :returns: the id, rev and key of the replaced vertex
         :rtype: dict
         :raises: VertexRevisionError, VertexReplaceError
         """
@@ -443,7 +443,7 @@ class Graph(object):
         :type data: dict
         :param wait_for_sync: wait for the create to sync to disk
         :type wait_for_sync: bool
-        :return: the id, rev and key of the new edge
+        :returns: the id, rev and key of the new edge
         :rtype: dict
         :raises: DocumentInvalidError, EdgeCreateError
         """
@@ -493,7 +493,7 @@ class Graph(object):
         :type keep_none: bool
         :param wait_for_sync: wait for the update to sync to disk
         :type wait_for_sync: bool
-        :return: the id, rev and key of the updated edge
+        :returns: the id, rev and key of the updated edge
         :rtype: dict
         :raises: EdgeRevisionError, EdgeUpdateError
         """

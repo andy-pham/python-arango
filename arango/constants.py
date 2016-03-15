@@ -1,7 +1,7 @@
 """Global constants."""
 
 # Name of the default ArangoDB database
-DEFAULT_DATABASE = "_system"
+DEFAULT_DB = "_system"
 
 # Valid collection types
 COLLECTION_TYPES = {"document", "edge"}

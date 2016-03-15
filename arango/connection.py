@@ -2,7 +2,7 @@
 
 import json
 
-from arango.constants import DEFAULT_DATABASE
+from arango.constants import DEFAULT_DB
 from arango.clients import DefaultHTTPClient
 from arango.utils import is_str
 
@@ -31,20 +31,32 @@ class Connection(object):
         self._protocol = protocol
         self._host = host
         self._port = port
-        self._username = username
-        self._password = password
-        self._database = DEFAULT_DATABASE if database is None else database
-        self.url_prefix = "{protocol}://{host}:{port}/_db/{database}".format(
+        self._database = DEFAULT_DB if database is None else database
+        self._url_prefix = "{protocol}://{host}:{port}/_db/{database}".format(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
             database=self._database,
         )
-        if client is not None:
-            self._client = client
-        else:
-            client_init_data = {"auth": (self._username, self._password)}
-            self._client = DefaultHTTPClient()
+        self._client = client if client else DefaultHTTPClient()
+        self._username = username
+        self._password = password
+
+    @property
+    def protocol(self):
+        return self._protocol
+
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def database(self):
+        return self._database
 
     def head(self, endpoint, params=None, headers=None):
         """Call a HEAD method in ArangoDB's REST API.
@@ -59,7 +71,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.head(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password)
@@ -78,7 +90,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.get(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password),
@@ -99,7 +111,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.put(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             data=data if is_str(data) else json.dumps(data),
             params=params,
             headers=headers,
@@ -121,7 +133,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.post(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             data=data if is_str(data) else json.dumps(data),
             params=params,
             headers=headers,
@@ -143,7 +155,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.patch(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             data=data if is_str(data) else json.dumps(data),
             params=params,
             headers=headers,
@@ -163,7 +175,7 @@ class Connection(object):
         :rtype: arango.response.Response
         """
         return self._client.delete(
-            url=self.url_prefix + endpoint,
+            url=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password)

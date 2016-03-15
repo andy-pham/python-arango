@@ -20,22 +20,21 @@ class Database(object):
     6. Graph Management
     """
 
-    def __init__(self, connection, name):
+    def __init__(self, connection):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
+        :type connection: arango.client.Client
         :param name: the name of this database
         :type name: str
         """
         self._conn = connection
-        self._name = name
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
-        return "<ArangoDB database '{}'>".format(self._name)
+        return "<ArangoDB database '{}'>".format(self._conn.db_name)
 
-    def properties(self):
+    def get_properties(self):
         """Return all properties of this database.
 
         :returns: the database properties
@@ -334,8 +333,7 @@ class Database(object):
     # AQL Functions #
     #################
 
-    @property
-    def aql_functions(self):
+    def list_aql_functions(self):
         """List the AQL functions defined in this database.
 
         :returns: a mapping of AQL function names to its javascript code
@@ -362,7 +360,7 @@ class Database(object):
         res = self._conn.post('/_api/aqlfunction', data=data)
         if res.status_code not in (200, 201):
             raise AQLFunctionCreateError(res)
-        return self.aql_functions
+        return self.list_aql_functions
 
     def delete_aql_function(self, name, group=None):
         """Delete the AQL function of the given name.
@@ -386,7 +384,59 @@ class Database(object):
         )
         if res.status_code not in HTTP_OK:
             raise AQLFunctionDeleteError(res)
-        return self.aql_functions
+        return self.list_aql_functions
+
+    ###################
+    # AQL Query Cache #
+    ###################
+
+    def clear_query_cache(self):
+        """Clear any results in the AQL query cache.
+
+        :returns: the result
+        :rtype: dict
+        :raises: AQLQueryCacheDeleteError
+        """
+        res = self._conn.delete('/_api/query-cache')
+        if res.status_code not in HTTP_OK:
+            raise AQLQueryCacheDeleteError(res)
+        return res.body
+
+    def get_query_cache(self):
+        """Return the global configuration of the AQL query cache.
+
+        :returns: the result
+        :rtype: dict
+        :raises: AQLQueryCacheGetError
+        """
+        res = self._conn.get('/_api/query-cache/properties')
+        if res.status_code not in HTTP_OK:
+            raise AQLQueryCacheGetError(res)
+        res.body['max_results'] = res.body.pop('maxResults')
+        return res.body
+
+    def set_query_cache(self, mode=None, max_results=None):
+        """Configure the AQL query cache.
+
+        :param mode: the mode to operate in (off/on/demand)
+        :param max_results: max number of results to be stored
+        :returns: the response
+        :rtype: dict
+        :raises: AQLQueryCacheSetError
+        """
+        data = {}
+        if mode is not None:
+            data['mode'] = mode
+        if max_results is not None:
+            data['maxResults'] = max_results
+        res = self._conn.put(
+            '/_api/query-cache/properties',
+            data=data
+        )
+        if res.status_code not in HTTP_OK:
+            raise AQLQueryCacheSetError(res)
+        res.body['max_results'] = res.body.pop('maxResults')
+        return res.body
 
     ################
     # Transactions #

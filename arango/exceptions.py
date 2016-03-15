@@ -1,7 +1,7 @@
 """ArangoDB Exceptions."""
 
 
-class RequestError(Exception):
+class ArangoError(Exception):
     """Base class for ArangoDB request errors.
 
     :param response: the Response object
@@ -24,7 +24,7 @@ class RequestError(Exception):
             self.error_code = None
 
         # Generate the error message for the exception
-        super(RequestError, self).__init__(message)
+        super(ArangoError, self).__init__(message)
         self.method = response.method
         self.url = response.url
         self.http_code = response.status_code
@@ -42,7 +42,7 @@ class NotFoundError(KeyError):
         super(NotFoundError, self).__init__(name)
 
 
-class ServerConnectionError(RequestError):
+class ServerConnectionError(ArangoError):
     """Failed to connect to ArangoDB."""
 
 
@@ -55,52 +55,73 @@ class InvalidArgumentError(Exception):
 ###########################
 
 
-class VersionGetError(RequestError):
+class EndpointsGetError(ArangoError):
+    """Failed to get the endpoints."""
+
+
+class VersionGetError(ArangoError):
     """Failed to retrieve the server version."""
 
 
-class DetailsGetError(RequestError):
+class DetailsGetError(ArangoError):
     """Failed to retrieve the server details."""
 
 
-class WriteAheadLogFlushError(RequestError):
+class WriteAheadLogFlushError(ArangoError):
     """Failed to flush the write-ahead log."""
 
 
-class WriteAheadLogGetError(RequestError):
+class WriteAheadLogGetError(ArangoError):
     """Failed to get the write-ahead log."""
 
 
-class WriteAheadLogSetError(RequestError):
+class WriteAheadLogSetError(ArangoError):
     """Failed to configure the write-ahead log."""
 
 
-class TimeGetError(RequestError):
+class TimeGetError(ArangoError):
     """Failed to return the current system time."""
 
 
-class EchoError(RequestError):
+class EchoError(ArangoError):
     """Failed to return current request."""
 
 
-class SleepError(RequestError):
+class SleepError(ArangoError):
     """Failed to suspend the execution."""
 
 
-class RequiredDatabaseVersionGetError(RequestError):
+class RequiredDatabaseVersionGetError(ArangoError):
     """Failed to retrieve the required database version."""
 
 
-class ShutdownError(RequestError):
+class ShutdownError(ArangoError):
     """Failed to initiate a clean shutdown sequence."""
 
 
-class TestsRunError(RequestError):
+class TestsRunError(ArangoError):
     """Failed to execute the specified tests on the server."""
 
 
-class ProgramExecuteError(RequestError):
+class ProgramExecuteError(ArangoError):
     """Failed to execute a the given Javascript program."""
+
+
+#########
+# Tasks #
+#########
+
+
+class TaskGetError(ArangoError):
+    """Failed to get the active server tasks."""
+
+
+class TaskCreateError(ArangoError):
+    """Failed to create a server task."""
+
+
+class TaskDeleteError(ArangoError):
+    """Failed to delete a server task."""
 
 
 #######################
@@ -112,23 +133,23 @@ class DatabaseNotFoundError(NotFoundError):
     """Failed to find the database."""
 
 
-class DatabaseListError(RequestError):
+class DatabaseListError(ArangoError):
     """Failed to get the list of databases."""
 
 
-class DatabasePropertyError(RequestError):
+class DatabasePropertyError(ArangoError):
     """Failed to get the database property."""
 
 
-class DatabaseGetError(RequestError):
+class DatabaseGetError(ArangoError):
     """Failed to get the database."""
 
 
-class DatabaseCreateError(RequestError):
+class DatabaseCreateError(ArangoError):
     """Failed to create the database."""
 
 
-class DatabaseDeleteError(RequestError):
+class DatabaseDeleteError(ArangoError):
     """Failed to delete the database."""
 
 
@@ -141,23 +162,23 @@ class UserNotFoundError(NotFoundError):
     """Failed to get the user."""
 
 
-class UserListError(RequestError):
+class UserListError(ArangoError):
     """Failed to get the list of users."""
 
 
-class UserCreateError(RequestError):
+class UserCreateError(ArangoError):
     """Failed to create the user."""
 
 
-class UserUpdateError(RequestError):
+class UserUpdateError(ArangoError):
     """Failed to update the user."""
 
 
-class UserReplaceError(RequestError):
+class UserReplaceError(ArangoError):
     """Failed to replace the user."""
 
 
-class UserDeleteError(RequestError):
+class UserDeleteError(ArangoError):
     """Failed to delete the user."""
 
 
@@ -174,47 +195,47 @@ class CollectionNotFoundError(NotFoundError):
     """Failed to find the collection."""
 
 
-class CollectionListError(RequestError):
+class CollectionListError(ArangoError):
     """Failed to get the list of collections."""
 
 
-class CollectionGetError(RequestError):
+class CollectionGetError(ArangoError):
     """Failed to get the collection."""
 
 
-class CollectionChecksumError(RequestError):
+class CollectionChecksumError(ArangoError):
     """Failed to get the collection checksum."""
 
 
-class CollectionCreateError(RequestError):
+class CollectionCreateError(ArangoError):
     """Failed to create the collection."""
 
 
-class CollectionDeleteError(RequestError):
+class CollectionDeleteError(ArangoError):
     """Failed to delete the collection"""
 
 
-class CollectionUpdateError(RequestError):
+class CollectionUpdateError(ArangoError):
     """Failed to update the collection."""
 
 
-class CollectionRenameError(RequestError):
+class CollectionRenameError(ArangoError):
     """Failed to rename the collection."""
 
 
-class CollectionTruncateError(RequestError):
+class CollectionTruncateError(ArangoError):
     """Failed to truncate the collection."""
 
 
-class CollectionLoadError(RequestError):
+class CollectionLoadError(ArangoError):
     """Failed to load the collection into memory."""
 
 
-class CollectionUnloadError(RequestError):
+class CollectionUnloadError(ArangoError):
     """Failed to unload the collection from memory."""
 
 
-class CollectionRotateJournalError(RequestError):
+class CollectionRotateJournalError(ArangoError):
     """Failed to rotate the journal of the collection."""
 
 
@@ -223,11 +244,11 @@ class CollectionRotateJournalError(RequestError):
 ########################################
 
 
-class DocumentsImportError(RequestError):
+class DocumentsImportError(ArangoError):
     """Failed to bulk import documents/edges."""
 
 
-class DocumentsExportError(RequestError):
+class DocumentsExportError(ArangoError):
     """Failed to bulk export documents/edges."""
 
 
@@ -240,27 +261,27 @@ class DocumentInvalidError(Exception):
     """The document is invalid (malformed)."""
 
 
-class DocumentRevisionError(RequestError):
+class DocumentRevisionError(ArangoError):
     """The expected and actual document revisions do not match."""
 
 
-class DocumentGetError(RequestError):
+class DocumentGetError(ArangoError):
     """Failed to get the document."""
 
 
-class DocumentCreateError(RequestError):
+class DocumentCreateError(ArangoError):
     """Failed to create the document."""
 
 
-class DocumentReplaceError(RequestError):
+class DocumentReplaceError(ArangoError):
     """Failed to replace the document."""
 
 
-class DocumentUpdateError(RequestError):
+class DocumentUpdateError(ArangoError):
     """Failed to update the document."""
 
 
-class DocumentDeleteError(RequestError):
+class DocumentDeleteError(ArangoError):
     """Failed to delete the document."""
 
 
@@ -273,27 +294,27 @@ class EdgeInvalidError(Exception):
     """The edge is invalid (malformed)."""
 
 
-class EdgeRevisionError(RequestError):
+class EdgeRevisionError(ArangoError):
     """The expected and actual edge revisions do not match."""
 
 
-class EdgeGetError(RequestError):
+class EdgeGetError(ArangoError):
     """Failed to get the edge."""
 
 
-class EdgeCreateError(RequestError):
+class EdgeCreateError(ArangoError):
     """Failed to create the edge."""
 
 
-class EdgeReplaceError(RequestError):
+class EdgeReplaceError(ArangoError):
     """Failed to replace the edge."""
 
 
-class EdgeUpdateError(RequestError):
+class EdgeUpdateError(ArangoError):
     """Failed to update the edge."""
 
 
-class EdgeDeleteError(RequestError):
+class EdgeDeleteError(ArangoError):
     """Failed to delete the edge."""
 
 
@@ -302,31 +323,31 @@ class EdgeDeleteError(RequestError):
 #####################
 
 
-class VertexInvalidError(RequestError):
+class VertexInvalidError(ArangoError):
     """The vertex is invalid (malformed)."""
 
 
-class VertexRevisionError(RequestError):
+class VertexRevisionError(ArangoError):
     """The expected and actual vertex revisions do not match."""
 
 
-class VertexGetError(RequestError):
+class VertexGetError(ArangoError):
     """Failed to get the vertex."""
 
 
-class VertexCreateError(RequestError):
+class VertexCreateError(ArangoError):
     """Failed to create the vertex."""
 
 
-class VertexUpdateError(RequestError):
+class VertexUpdateError(ArangoError):
     """Failed to update the vertex."""
 
 
-class VertexReplaceError(RequestError):
+class VertexReplaceError(ArangoError):
     """Failed to replace the vertex."""
 
 
-class VertexDeleteError(RequestError):
+class VertexDeleteError(ArangoError):
     """Failed to delete the vertex."""
 
 
@@ -335,44 +356,56 @@ class VertexDeleteError(RequestError):
 ####################
 
 
-class IndexListError(RequestError):
+class IndexListError(ArangoError):
     """Failed to get the list of indexes."""
 
 
-class IndexCreateError(RequestError):
+class IndexCreateError(ArangoError):
     """Failed to create the index."""
 
 
-class IndexDeleteError(RequestError):
+class IndexDeleteError(ArangoError):
     """Failed to delete the index."""
 
 
-########################
-# AQL Query Exceptions #
-########################
+################################
+# AQL Query & Cache Exceptions #
+################################
 
 
-class AQLQueryExplainError(RequestError):
+class AQLQueryExplainError(ArangoError):
     """Failed to explain the AQL query."""
 
 
-class AQLQueryValidateError(RequestError):
+class AQLQueryValidateError(ArangoError):
     """Failed to validate the AQL query."""
 
 
-class AQLQueryExecuteError(RequestError):
+class AQLQueryExecuteError(ArangoError):
     """Failed to execute the AQL query."""
+
+
+class AQLQueryCacheDeleteError(ArangoError):
+    """Failed to clear the AQL query cache."""
+
+
+class AQLQueryCacheGetError(ArangoError):
+    """Failed to get the AQL query cache properties."""
+
+
+class AQLQueryCacheSetError(ArangoError):
+    """Failed to configure the AQL query cache properties."""
 
 
 #####################
 # Cursor Exceptions #
 #####################
 
-class CursorGetNextError(RequestError):
+class CursorGetNextError(ArangoError):
     """Failed to get the next cursor result."""
 
 
-class CursorDeleteError(RequestError):
+class CursorDeleteError(ArangoError):
     """Failed to delete the cursor."""
 
 
@@ -381,15 +414,15 @@ class CursorDeleteError(RequestError):
 ###########################
 
 
-class AQLFunctionListError(RequestError):
+class AQLFunctionListError(ArangoError):
     """Failed to get the list of AQL functions."""
 
 
-class AQLFunctionCreateError(RequestError):
+class AQLFunctionCreateError(ArangoError):
     """Failed to create the AQL function."""
 
 
-class AQLFunctionDeleteError(RequestError):
+class AQLFunctionDeleteError(ArangoError):
     """Failed to delete the AQL function."""
 
 
@@ -398,67 +431,67 @@ class AQLFunctionDeleteError(RequestError):
 ###########################
 
 
-class SimpleQueryGetByExampleError(RequestError):
+class SimpleQueryGetByExampleError(ArangoError):
     """Failed to execute the ``by-example`` simple query."""
 
 
-class SimpleQueryFirstExampleError(RequestError):
+class SimpleQueryFirstExampleError(ArangoError):
     """Failed to execute the ``first-example`` simple query."""
 
 
-class SimpleQueryReplaceByExampleError(RequestError):
+class SimpleQueryReplaceByExampleError(ArangoError):
     """Failed to execute the ``replace-by-example`` simple query."""
 
 
-class SimpleQueryUpdateByExampleError(RequestError):
+class SimpleQueryUpdateByExampleError(ArangoError):
     """Failed to execute the ``update-by-example`` simple query."""
 
 
-class SimpleQueryDeleteByExampleError(RequestError):
+class SimpleQueryDeleteByExampleError(ArangoError):
     """Failed to execute the ``Delete-by-example`` simple query."""
 
 
-class SimpleQueryFirstError(RequestError):
+class SimpleQueryFirstError(ArangoError):
     """Failed to execute the ``first`` simple query."""
 
 
-class SimpleQueryLastError(RequestError):
+class SimpleQueryLastError(ArangoError):
     """Failed to execute the ``last`` simple query."""
 
 
-class SimpleQueryAllError(RequestError):
+class SimpleQueryAllError(ArangoError):
     """Failed to execute the `all`` simple query."""
 
 
-class SimpleQueryAnyError(RequestError):
+class SimpleQueryAnyError(ArangoError):
     """Failed to execute the ``any`` simple query."""
 
 
-class SimpleQueryRangeError(RequestError):
+class SimpleQueryRangeError(ArangoError):
     """Failed to execute the ``range`` simple query."""
 
 
-class SimpleQueryNearError(RequestError):
+class SimpleQueryNearError(ArangoError):
     """Failed to execute the ``near`` simple query."""
 
 
-class SimpleQueryWithinError(RequestError):
+class SimpleQueryWithinError(ArangoError):
     """Failed to execute the ``within`` simple query."""
 
 
-class SimpleQueryFullTextError(RequestError):
+class SimpleQueryFullTextError(ArangoError):
     """Failed to execute the ``fulltext`` simple query."""
 
 
-class SimpleQueryLookupByKeysError(RequestError):
+class SimpleQueryLookupByKeysError(ArangoError):
     """Failed to execute the ``lookup-by-keys`` simple query."""
 
 
-class SimpleQueryDeleteByKeysError(RequestError):
+class SimpleQueryDeleteByKeysError(ArangoError):
     """Failed to execute the ``Delete-by-keys`` simple query."""
 
 
-class SimpleQueryError(RequestError):
+class SimpleQueryError(ArangoError):
     """Failed to execute a simple query."""
 
 
@@ -467,8 +500,12 @@ class SimpleQueryError(RequestError):
 ##########################
 
 
-class TransactionExecuteError(RequestError):
+class TransactionExecuteError(ArangoError):
     """Failed to execute a transaction."""
+
+
+class TransactionGetError(ArangoError):
+    """Failed to get the running transactions."""
 
 
 ####################
@@ -480,7 +517,7 @@ class BatchInvalidError(Exception):
     """The batch request is invalid (malformed)."""
 
 
-class BatchExecuteError(RequestError):
+class BatchExecuteError(ArangoError):
     """Failed to execute a batch request."""
 
 
@@ -493,27 +530,27 @@ class GraphNotFoundError(NotFoundError):
     """Failed to find the graph."""
 
 
-class GraphListError(RequestError):
+class GraphListError(ArangoError):
     """Failed to get the list of graphs."""
 
 
-class GraphGetError(RequestError):
+class GraphGetError(ArangoError):
     """Failed to get the graph."""
 
 
-class GraphCreateError(RequestError):
+class GraphCreateError(ArangoError):
     """Failed to create the graph."""
 
 
-class GraphDeleteError(RequestError):
+class GraphDeleteError(ArangoError):
     """Failed to delete the graph."""
 
 
-class GraphPropertyError(RequestError):
+class GraphPropertyError(ArangoError):
     """Failed to get the graph property."""
 
 
-class GraphTraversalError(RequestError):
+class GraphTraversalError(ArangoError):
     """Failed to execute the graph traversal."""
 
 
@@ -522,15 +559,15 @@ class GraphTraversalError(RequestError):
 ################################
 
 
-class VertexCollectionListError(RequestError):
+class VertexCollectionListError(ArangoError):
     """Failed to get the list of vertex collections."""
 
 
-class VertexCollectionCreateError(RequestError):
+class VertexCollectionCreateError(ArangoError):
     """Failed to create the vertex collection."""
 
 
-class VertexCollectionDeleteError(RequestError):
+class VertexCollectionDeleteError(ArangoError):
     """Failed to delete the vertex collection."""
 
 
@@ -539,19 +576,19 @@ class VertexCollectionDeleteError(RequestError):
 #########################################
 
 
-class EdgeDefinitionListError(RequestError):
+class EdgeDefinitionListError(ArangoError):
     """Failed to get the list of edge definitions."""
 
 
-class EdgeDefinitionCreateError(RequestError):
+class EdgeDefinitionCreateError(ArangoError):
     """Failed to create the edge definition."""
 
 
-class EdgeDefinitionReplaceError(RequestError):
+class EdgeDefinitionReplaceError(ArangoError):
     """Failed to replace the edge definition."""
 
 
-class EdgeDefinitionDeleteError(RequestError):
+class EdgeDefinitionDeleteError(ArangoError):
     """Failed to delete the edge definition."""
 
 
@@ -560,23 +597,23 @@ class EdgeDefinitionDeleteError(RequestError):
 ##########################################
 
 
-class LogGetError(RequestError):
+class LogGetError(ArangoError):
     """Failed to get the global log."""
 
 
-class RountingInfoReloadError(RequestError):
+class RountingInfoReloadError(ArangoError):
     """Failed to reload the routing information."""
 
 
-class StatisticsGetError(RequestError):
+class StatisticsGetError(ArangoError):
     """Failed to get the server statistics."""
 
 
-class StatisticsDescriptionGetError(RequestError):
+class StatisticsDescriptionGetError(ArangoError):
     """Failed to get the statistics description."""
 
 
-class ServerRoleGetError(RequestError):
+class ServerRoleGetError(ArangoError):
     """Failed to get the role of the server in a cluster."""
 
 

@@ -11,6 +11,5 @@ setup(
     download_url="https://github.com/Joowani/python-arango/tarball/2.2.0",
     packages=find_packages(),
     include_package_data=True,
-    install_requires=["requests", "nose"],
-    test_suite="nose",
+    install_requires=["requests", "pytest"]
 )

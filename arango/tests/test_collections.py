@@ -22,7 +22,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.db = self.arango.create_database(self.db_name)
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_create_collection(self):

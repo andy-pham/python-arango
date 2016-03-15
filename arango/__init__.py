@@ -1,12 +1,14 @@
 """ArangoDB's Top-Level API."""
 
+from __future__ import absolute_import, unicode_literals
+
 from datetime import datetime
 
 
 from arango.database import Database
 from arango.connection import Connection
 from arango.exceptions import *
-from arango.constants import HTTP_OK, LOG_LEVELS, DEFAULT_DATABASE
+from arango.constants import HTTP_OK, LOG_LEVELS, DEFAULT_DB
 from arango.clients import DefaultHTTPClient
 from arango.utils import uncamelify, sanitize_str
 
@@ -21,7 +23,8 @@ class Arango(object):
     """
 
     def __init__(self, protocol='http', host='localhost', port=8529,
-                 username='root', password='', client=None, check_conn=False):
+                 username='root', password='', http_client=None,
+                 verify_connection=False):
         """Initialize the API driver.
 
         :param protocol: the internet transfer protocol (default: 'http')
@@ -34,10 +37,10 @@ class Arango(object):
         :type username: str
         :param password: ArangoDB password (default: '')
         :type password: str
-        :param client: the HTTP client to use under the hood
-        :type client: arango.clients.base.BaseHTTPClient or None
-        :param check_conn: check the connection during instantiation
-        :type check_conn: bool
+        :param http_client: the HTTP client to use under the hood
+        :type http_client: arango.clients.base.BaseHTTPClient or None
+        :param verify_connection: check the connection during instantiation
+        :type verify_connection: bool
         :raises: arango.exceptions.ConnectionError
         """
         self._protocol = protocol
@@ -45,7 +48,7 @@ class Arango(object):
         self._port = port
         self._username = username
         self._password = password
-        self._client = client if client else DefaultHTTPClient()
+        self._client = http_client if http_client else DefaultHTTPClient()
 
         # Initialize the ArangoDB API connection object
         self._conn = Connection(
@@ -56,14 +59,25 @@ class Arango(object):
             password=self._password,
             client=self._client,
         )
-        if check_conn:
-            # Check the connection by requesting a header
+        # Verify the connection by requesting a header
+        if verify_connection:
             res = self._conn.head('/_api/version')
             if res.status_code not in HTTP_OK:
                 raise ServerConnectionError(res)
-
         # Initialize the wrapper for the default database
-        self._default_database = Database(self._conn, DEFAULT_DATABASE)
+        self._default_database = Database(self._conn)
+
+    @property
+    def protocol(self):
+        return self._protocol
+
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def port(self):
+        return self._port
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
@@ -81,60 +95,27 @@ class Arango(object):
     # Miscellaneous Functions #
     ###########################
 
-    def version(self):
+    def get_version(self, details=False):
         """Return the version of the ArangoDB server.
 
+        :param details: whether to include component information
+        :type details: bool
         :returns: the server version
         :rtype: str
         :raises: VersionGetError
         """
         res = self._conn.get(
             endpoint='/_api/version',
-            params={'details': False}
+            params={'details': details}
         )
         if res.status_code not in HTTP_OK:
             raise VersionGetError(res)
-        return str(res.body['version'])
+        return res.body['details'] if details else res.body['version']
 
-    def details(self):
-        """Return the details of the ArangoDB server.
+    def get_target_version(self):
+        """Return the required version of the target database.
 
-        :returns: the server details
-        :rtype: dict
-        :raises: VersionGetError
-        """
-        res = self._conn.get(
-            endpoint='/_api/version',
-            params={'details': True}
-        )
-        if res.status_code not in HTTP_OK:
-            raise VersionGetError(res)
-        details = res.body['details']
-        return {
-            'architecture': str(details['architecture']),
-            'build_date': datetime.strptime(
-                details['build-date'], "%Y-%m-%d %H:%M:%S"
-            ),
-            'configure': str(details['configure']),
-            'env': str(details['env']),
-            'fd_client_event_handler': str(details['fd-client-event-handler']),
-            'fd_set_size': int(details['fd-setsize']),
-            'icu_version': str(details['icu-version']),
-            'libev_version': str(details['libev-version']),
-            'maintainer_mode': details['maintainer-mode'] != 'false',
-            'mode': str(details['mode']),
-            'openssl_version': str(details['openssl-version']),
-            'server_version': str(details['server-version']),
-            'size_of_int': int(details['sizeof int']),
-            'size_of_void*': int(details['sizeof void*']),
-            'tcmalloc': details['tcmalloc'] != 'false',
-            'v8_version': str(details['v8-version'])
-        }
-
-    def required_db_version(self):
-        """Return the required database version.
-
-        :returns: the required database version
+        :returns: the required version of the target database
         :rtype: str
         :raises: RequiredDatabaseVersionGetError
         """
@@ -143,7 +124,7 @@ class Arango(object):
             raise RequiredDatabaseVersionGetError(res)
         return str(res.body['version'])
 
-    def time(self):
+    def get_system_time(self):
         """Return the current system time.
 
         :returns: the system time
@@ -155,7 +136,7 @@ class Arango(object):
             raise TimeGetError(res)
         return datetime.fromtimestamp(res.body['time'])
 
-    def wal(self):
+    def get_wal(self):
         """Return the configuration of the write-ahead log.
 
         :returns: the configuration of the write-ahead log
@@ -173,6 +154,29 @@ class Arango(object):
             'sync_interval': res.body.get('syncInterval'),
             'throttle_wait': res.body.get('throttleWait'),
             'throttle_limit': res.body.get('throttleWhenPending')
+        }
+
+    def get_transactions(self):
+        """Return information about the currently running transactions.
+
+        Fields in the returned dictionary:
+            count: the number of current running transactions
+            last_collected: min ID of the last collected logfile (at the start
+                of running transaction). None if no transaction is running.
+            last_sealed: min ID of the last sealed logfile (at the start of
+                each running transaction). None if no transaction is running.
+
+        :returns: the information about the currently running transactions
+        :rtype: dict
+        :raises: TransactionsGetError
+        """
+        res = self._conn.get('/_admin/wal/transactions')
+        if res.status_code not in HTTP_OK:
+            raise TransactionGetError(res)
+        return {
+            'count': res.body.get('runningTransactions'),
+            'last_collected': res.body.get('minLastCollected'),
+            'last_sealed': res.body.get('minLastSealed'),
         }
 
     def flush_wal(self, wait_for_sync=True, wait_for_gc=True):
@@ -193,6 +197,7 @@ class Arango(object):
         )
         if res.status_code not in HTTP_OK:
             raise WriteAheadLogFlushError(res)
+        return res.body
 
     def configure_wal(self, oversized_ops=None, log_size=None,
                       historic_logs=None, reserve_logs=None,
@@ -282,13 +287,14 @@ class Arango(object):
         res = self._conn.get('/_admin/shutdown')
         if res.status_code not in HTTP_OK:
             raise ShutdownError(res)
+        return res.body
 
     def test(self, tests):
         """Run the available unittests on the server.
 
         :param tests: list of files containing the test suites
         :type tests: list
-        :returns: the passed result
+        :returns: the test result
         :rtype: dict
         :raises: TestsRunError
         """
@@ -297,7 +303,7 @@ class Arango(object):
             raise TestsRunError(res)
         return res.body.get('passed')
 
-    def run_javascript(self, javascript):
+    def execute(self, javascript):
         """Execute a javascript program on the server.
 
         :param javascript: the body of the javascript program to execute.
@@ -329,7 +335,9 @@ class Arango(object):
         """
         # Get the current user's databases
         res = self._conn.get(
-            '/_api/database/user' if user_only else '/_api/database'
+            '/_api/database/user'
+            if user_only
+            else '/_api/database'
         )
         if res.status_code not in HTTP_OK:
             raise DatabaseListError(res)
@@ -343,28 +351,15 @@ class Arango(object):
         :returns: the database object
         :rtype: arango.database.Database
         """
-        return self.database(name)
-
-    def database(self, name):
-        """Return the database object of the specified name.
-
-        :param name: the name of the database
-        :type name: str
-        :returns: the database object
-        :rtype: arango.database.Database
-        """
-        return Database(
-            name=name,
-            connection=Connection(
-                protocol=self._protocol,
-                host=self._host,
-                port=self._port,
-                username=self._username,
-                password=self._password,
-                database=name,
-                client=self._client
-            )
-        )
+        return Database(Connection(
+            protocol=self._protocol,
+            host=self._host,
+            port=self._port,
+            username=self._username,
+            password=self._password,
+            database=name,
+            client=self._client
+        ))
 
     def create_database(self, name, users=None):
         """Create a new database.
@@ -379,25 +374,27 @@ class Arango(object):
         """
         res = self._conn.post(
             '/_api/database',
-            data={'name': name, 'users': users} if users else {'name': name}
+            data={'name': name, 'users': users}
+            if users else {'name': name}
         )
         if res.status_code not in HTTP_OK:
             raise DatabaseCreateError(res)
-        return self.database(name)
+        return self.db(name)
 
-    def delete_database(self, name, safe_delete=False):
-        """Delete the database of the specified name.
+    def drop_database(self, name, ignore_error=False):
+        """Drop the database of the specified name.
 
         :param name: the name of the database to delete
         :type name: str
-        :param safe_delete: whether to execute a safe delete (ignore 404)
-        :type safe_delete: bool
+        :param ignore_error: whether to ignore 404
+        :type ignore_error: bool
         :raises: DatabaseDeleteError
         """
         res = self._conn.delete('/_api/database/{}'.format(name))
         if res.status_code not in HTTP_OK:
-            if not (res.status_code == 404 and safe_delete):
+            if not (res.status_code == 404 and ignore_error):
                 raise DatabaseDeleteError(res)
+        return res.body
 
     ###################
     # User Management #
@@ -413,14 +410,12 @@ class Arango(object):
         res = self._conn.get('/_api/user')
         if res.status_code not in HTTP_OK:
             raise UserListError(res)
-        return {
-            record['user']: {
-                'change_password': record.get('changePassword'),
-                'active': record.get('active'),
-                'extra': record.get('extra'),
-            }
-            for record in res.body['result']
-        }
+        return [{
+            'user': record['user'],
+            'active': record['active'],
+            'extra': record['extra'],
+            'change_password': record['changePassword']
+        } for record in res.body['result']]
 
     def user(self, username):
         """Return the details on a single user.
@@ -437,9 +432,10 @@ class Arango(object):
         for record in res.body['result']:
             if record['user'] == username:
                 return {
-                    'change_password': record.get('changePassword'),
-                    'active': record.get('active'),
-                    'extra': record.get('extra'),
+                    'user': record['user'],
+                    'active': record['active'],
+                    'extra': record['extra'],
+                    'change_password': record['changePassword']
                 }
         raise UserNotFoundError(username)
 
@@ -521,8 +517,8 @@ class Arango(object):
             raise UserUpdateError(res)
         return {
             'active': res.body.get('active'),
-            'change_password': res.body.get('changePassword'),
             'extra': res.body.get('extra'),
+            'change_password': res.body.get('changePassword'),
         }
 
     def replace_user(self, username, password, active=None, extra=None,
@@ -562,8 +558,8 @@ class Arango(object):
             raise UserReplaceError(res)
         return {
             'active': res.body.get('active'),
-            'change_password': res.body.get('changePassword'),
             'extra': res.body.get('extra'),
+            'change_password': res.body.get('changePassword'),
         }
 
     def delete_user(self, username, safe_delete=False):
@@ -579,6 +575,7 @@ class Arango(object):
         if res.status_code not in HTTP_OK:
             if not (res.status_code == 404 and safe_delete):
                 raise UserDeleteError(res)
+        return res.body
 
     ###############################
     # Administration & Monitoring #
@@ -636,7 +633,7 @@ class Arango(object):
         res = self._conn.get('/_admin/log')
         if res.status_code not in HTTP_OK:
             LogGetError(res)
-        return sanitize_str(res.body)
+        return res.body
 
     def reload_routing(self):
         """Reload the routing information from the collection ``routing``.
@@ -646,6 +643,7 @@ class Arango(object):
         res = self._conn.post('/_admin/routing/reload')
         if res.status_code not in HTTP_OK:
             raise RountingInfoReloadError(res)
+        return res.body
 
     def statistics(self, description=False):
         """Return the server statistics.
@@ -665,13 +663,14 @@ class Arango(object):
             raise StatisticsGetError(res)
         res.body.pop('code', None)
         res.body.pop('error', None)
-        return sanitize_str(res.body)
+        return res.body
 
     def role(self):
         """Return the role of the server in the cluster if applicable
 
         Possible return values are:
 
+        SINGLE:
         COORDINATOR: the server is a coordinator in the cluster
         PRIMARY:     the server is a primary database in the cluster
         SECONDARY:   the server is a secondary database in the cluster
@@ -680,14 +679,109 @@ class Arango(object):
                      the only possible return value.
 
         :returns: the server role
-        :rtype: str
+        :rtype: unicode
         :raises: ServerRoleGetError
         """
         res = self._conn.get('/_admin/server/role')
         if res.status_code not in HTTP_OK:
             raise ServerRoleGetError(res)
-        return str(res.body.get('role'))
+        return res.body.get('role')
 
-if __name__ == '__main__':
-    a = Arango()
-    print(a.version())
+    def endpoints(self):
+        """Return the list of the endpoints the server is listening on.
+
+        Each endpoint is mapped to a list of databases. If the list is empty,
+        it means all databases can be accessed via the endpoint. If the list
+        contains more than one database, the first database receives all the
+        requests by default, unless the name is explicitly specified.
+
+        :returns: the list of endpoints
+        :rtype: list
+        :raises EndpointsGetError
+        """
+        res = self._conn.get('/_api/endpoint')
+        if res.status_code not in HTTP_OK:
+            raise EndpointsGetError(res)
+        return res.body
+
+    #########
+    # Tasks #
+    #########
+
+    def tasks(self):
+        """Return all server tasks that are currently active.
+
+        :returns: list of server tasks that are currently active
+        :rtype: list
+        :raises: TaskGetError
+        """
+        res = self._conn.get('/_api/tasks')
+        if res.status_code not in HTTP_OK:
+            raise TaskGetError(res)
+        return res.body
+
+    def task(self, id):
+        """Return the active server task with the given id.
+
+        :param id: the id of the server task
+        :type id: str
+        :returns: the details on the active task
+        :rtype: dict
+        :raises: TaskGetError
+        """
+        res = self._conn.get('/_api/tasks/{}'.format(id))
+        if res.status_code not in HTTP_OK:
+            raise TaskGetError(res)
+        return res.body
+
+    # TODO verify which arguments are optional
+    def create_task(self, name, command, period=None, offset=None, params=None,
+                    id=None):
+        """Create a new task with a generated ID.
+
+        :param name: the name of the task
+        :type name: str
+        :param command: the Javascript code to execute
+        :type command: str
+        :param period: the number of seconds between the executions
+        :type period: int
+        :param params: the parameters passed into the command
+        :type params: dict
+
+        :param offset: the initial delay in seconds
+        :type offset: int
+        :return: the details on the new task created
+        :raises: TaskCreateError
+        """
+        data = {
+            'name': name,
+            'command': command,
+            'params': params if params else {},
+        }
+        if id is not None:
+            data['id'] = id
+        if period is not None:
+            data['period'] = period
+        if offset is not None:
+            data['offset'] = offset
+        res = self._conn.put(
+            '/_api/tasks/{}'.format(id if id else ''),
+            data=data
+        )
+        if res.status_code not in HTTP_OK:
+            raise TaskCreateError(res)
+        return res.body
+
+    def delete_task(self, id):
+        """Delete the server task specified by ID.
+
+        :param id: the ID of the server task
+        :type id: str
+        :returns: the result of the deletion
+        :rtype: dict
+        :raises: TaskDeleteError
+        """
+        res = self._conn.delete('/_api/tasks/{}'.format(id))
+        if res.status_code not in HTTP_OK:
+            raise TaskDeleteError(res)
+        return res.body

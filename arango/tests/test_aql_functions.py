@@ -20,7 +20,7 @@ class AQLFunctionManagementTest(unittest.TestCase):
         self.db = self.arango.create_database(self.db_name)
 
         # Test database cleanup
-        self.addCleanup(self.arango.delete_database,
+        self.addCleanup(self.arango.drop_database,
                         name=self.db_name, safe_delete=True)
 
     def test_create_valid_aql_function(self):
@@ -29,7 +29,7 @@ class AQLFunctionManagementTest(unittest.TestCase):
             "function (celsius) { return celsius * 1.8 + 32; }"
         )
         self.assertEqual(
-            self.db.aql_functions,
+            self.db.list_aql_functions,
             {
                 "myfunctions::temperature::celsiustofahrenheit": (
                     "function (celsius) { return celsius * 1.8 + 32; }"
@@ -53,7 +53,7 @@ class AQLFunctionManagementTest(unittest.TestCase):
         self.db.delete_aql_function(
             "myfunctions::temperature::celsiustofahrenheit",
         )
-        self.assertEqual(self.db.aql_functions, {})
+        self.assertEqual(self.db.list_aql_functions, {})
 
     # TODO create functions within function
     def test_delete_aql_functions_by_group(self):
@@ -65,7 +65,7 @@ class AQLFunctionManagementTest(unittest.TestCase):
             "myfunctions::temperature::celsiustofahrenheit",
             group=True
         )
-        self.assertEqual(self.db.aql_functions, {})
+        self.assertEqual(self.db.list_aql_functions, {})
 
 
 if __name__ == "__main__":
