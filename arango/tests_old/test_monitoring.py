@@ -11,13 +11,13 @@ class MonitoringTest(unittest.TestCase):
         self.arango = Arango()
 
     def test_get_log(self):
-        self.arango.read_log()
+        self.arango.get_log()
 
     def test_get_statistics(self):
-        self.arango.statistics()
+        self.arango.get_statistics()
 
     def test_get_server_role(self):
-        self.arango.role()
+        self.arango.get_role()
 
 
 if __name__ == "__main__":

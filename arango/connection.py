@@ -32,11 +32,11 @@ class Connection(object):
         self._host = host
         self._port = port
         self._database = DEFAULT_DB if database is None else database
-        self._url_prefix = "{protocol}://{host}:{port}/_db/{database}".format(
+        self._url_prefix = "{protocol}://{host}:{port}/_db/{db}".format(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
-            database=self._database,
+            db=self._database,
         )
         self._client = client if client else DefaultHTTPClient()
         self._username = username
@@ -44,24 +44,44 @@ class Connection(object):
 
     @property
     def protocol(self):
+        """Return the HTTP protocol.
+
+        :returns: the HTTP protocol
+        :rtype: str
+        """
         return self._protocol
 
     @property
     def host(self):
+        """Return the server host.
+
+        :returns: the server host
+        :rtype: str
+        """
         return self._host
 
     @property
     def port(self):
+        """Return the server port.
+
+        :returns: the server port
+        :rtype: int
+        """
         return self._port
 
     @property
     def database(self):
+        """Return the name of the database.
+
+        :returns: the name of the database
+        :rtype: str
+        """
         return self._database
 
     def head(self, endpoint, params=None, headers=None):
-        """Call a HEAD method in ArangoDB's REST API.
+        """Call a HEAD endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
         :type params: dict or None
@@ -78,9 +98,9 @@ class Connection(object):
         )
 
     def get(self, endpoint, params=None, headers=None):
-        """Call a GET method in ArangoDB's REST API.
+        """Call a GET endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
         :type params: dict or None
@@ -97,9 +117,9 @@ class Connection(object):
         )
 
     def put(self, endpoint, data=None, params=None, headers=None):
-        """Call a PUT method in ArangoDB's REST API.
+        """Call a PUT endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
         :type data: str or dict or None
@@ -119,9 +139,9 @@ class Connection(object):
         )
 
     def post(self, endpoint, data=None, params=None, headers=None):
-        """Call a POST method in ArangoDB's REST API.
+        """Call a POST endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
         :type data: str or dict or None
@@ -141,9 +161,9 @@ class Connection(object):
         )
 
     def patch(self, endpoint, data=None, params=None, headers=None):
-        """Call a PATCH method in ArangoDB's REST API.
+        """Call a PATCH endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
         :type data: str or dict or None
@@ -163,9 +183,9 @@ class Connection(object):
         )
 
     def delete(self, endpoint, params=None, headers=None):
-        """Call a DELETE method in ArangoDB's REST API.
+        """Call a DELETE endpoint in ArangoDB's REST API.
 
-        :param endpoint: the API path (e.g. '/_api/version')
+        :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
         :type params: dict or None

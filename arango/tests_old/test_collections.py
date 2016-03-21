@@ -7,7 +7,7 @@ from arango.exceptions import (
     CollectionRotateJournalError,
 )
 from arango.utils import is_str
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_col_name,
     generate_db_name
 )
@@ -72,7 +72,7 @@ class CollectionManagementTest(unittest.TestCase):
         )
         # Ensure that the new collection's properties are set correctly
         self.assertEqual(col.name, col_name)
-        self.assertTrue(col.revision, "0")
+        self.assertTrue(col.get_revision, "0")
         self.assertEqual(col.status, "loaded")
         self.assertEqual(col.journal_size, 7774208)
         self.assertEqual(col.checksum(), 0)
@@ -91,7 +91,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.assertTrue(col.wait_for_sync)
         self.assertTrue(col.is_edge)
         self.assertTrue(is_str(col.id))
-        self.assertTrue(isinstance(col.statistics(), dict))
+        self.assertTrue(isinstance(col.get_statistics(), dict))
 
     def test_collection_setters(self):
         # Create a new collection with predefined properties

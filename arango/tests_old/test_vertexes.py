@@ -3,7 +3,7 @@
 import unittest
 
 from arango import Arango
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_graph_name,
     generate_col_name,
     generate_db_name

@@ -1,6 +1,5 @@
 """ArangoDB Database."""
 
-from arango.utils import uncamelify
 from arango.graph import Graph
 from arango.collection import Collection
 from arango.cursor import cursor
@@ -9,14 +8,14 @@ from arango.exceptions import *
 
 
 class Database(object):
-    """Wrapper for ArangoDB's database-specific APIs:
+    """Wrapper for ArangoDB's database-specific APIs endpoints which cover:
 
     1. Database properties
     1. Collection Management
     2. AQL Queries
     3. Batch Requests
     4. AQL Functions
-    5. Transaction
+    5. Transactions
     6. Graph Management
     """
 
@@ -24,15 +23,26 @@ class Database(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.client.Client
-        :param name: the name of this database
-        :type name: str
+        :type connection: arango.connection.Connection
         """
         self._conn = connection
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
-        return "<ArangoDB database '{}'>".format(self._conn.db_name)
+        return "<ArangoDB database '{}'>".format(self._conn.database)
+
+    def __getitem__(self, name):
+        """Return the collection of the given name."""
+        return Collection(self._conn, name)
+
+    @property
+    def name(self):
+        """Return the name of this database.
+
+        :returns: the name of this database
+        :rtype: str
+        """
+        return self._conn.database
 
     def get_properties(self):
         """Return all properties of this database.
@@ -44,7 +54,9 @@ class Database(object):
         res = self._conn.get('/_api/database/current')
         if res.status_code not in HTTP_OK:
             raise DatabasePropertyError(res)
-        return uncamelify(res.body['result'])
+        result = res.body['result']
+        result['is_system'] = result.pop('isSystem')
+        return result
 
     ###############
     # AQL Queries #
@@ -86,20 +98,25 @@ class Database(object):
         if res.status_code not in HTTP_OK:
             raise AQLQueryExplainError(res)
         if 'plan' in res.body:
-            return uncamelify(res.body['plan'])
+            return res.body['plan']
         else:
-            return uncamelify(res.body['plans'])
+            return res.body['plans']
 
     def validate_query(self, query):
         """Validate the AQL query.
 
         :param query: the AQL query to validate
         :type query: str
+        :returns: whether the validation was successful
+        :rtype: bool
         :raises: AQLQueryValidateError
         """
         res = self._conn.post('/_api/query', data={'query': query})
         if res.status_code not in HTTP_OK:
             raise AQLQueryValidateError(res)
+        res.body.pop('code', None)
+        res.body.pop('error', None)
+        return res.body
 
     def execute_query(self, query, count=False, batch_size=None, ttl=None,
                       bind_vars=None, full_count=None, max_plans=None,
@@ -352,17 +369,17 @@ class Database(object):
         :type name: str
         :param code: the stringified javascript code of the new function
         :type code: str
-        :returns: the updated AQL functions
-        :rtype: dict
+        :returns: whether the AQL function was created successfully
+        :rtype: bool
         :raises: AQLFunctionCreateError
         """
         data = {'name': name, 'code': code}
         res = self._conn.post('/_api/aqlfunction', data=data)
         if res.status_code not in (200, 201):
             raise AQLFunctionCreateError(res)
-        return self.list_aql_functions
+        return not res.body['error']
 
-    def delete_aql_function(self, name, group=None):
+    def delete_aql_function(self, name, group=None, ignore_missing=False):
         """Delete the AQL function of the given name.
 
         If ``group`` is set to True, then the function name provided in
@@ -373,9 +390,12 @@ class Database(object):
 
         :param name: the name of the AQL function to delete
         :type name: str
-        :param group: whether or not to treat name as a namespace prefix
-        :returns: the updated AQL functions
-        :rtype: dict
+        :param group: whether to treat the name as a namespace prefix
+        :type group: bool
+        :param ignore_missing: whether to ignore 404
+        :type ignore_missing: bool
+        :returns: whether the AQL function was deleted successfully
+        :rtype: bool
         :raises: AQLFunctionDeleteError
         """
         res = self._conn.delete(
@@ -383,24 +403,13 @@ class Database(object):
             params={'group': group} if group is not None else {}
         )
         if res.status_code not in HTTP_OK:
-            raise AQLFunctionDeleteError(res)
-        return self.list_aql_functions
+            if not (res.status_code == 404 and ignore_missing):
+                raise AQLFunctionDeleteError(res)
+        return not res.body['error']
 
     ###################
     # AQL Query Cache #
     ###################
-
-    def clear_query_cache(self):
-        """Clear any results in the AQL query cache.
-
-        :returns: the result
-        :rtype: dict
-        :raises: AQLQueryCacheDeleteError
-        """
-        res = self._conn.delete('/_api/query-cache')
-        if res.status_code not in HTTP_OK:
-            raise AQLQueryCacheDeleteError(res)
-        return res.body
 
     def get_query_cache(self):
         """Return the global configuration of the AQL query cache.
@@ -437,6 +446,18 @@ class Database(object):
             raise AQLQueryCacheSetError(res)
         res.body['max_results'] = res.body.pop('maxResults')
         return res.body
+
+    def clear_query_cache(self):
+        """Clear any results in the AQL query cache.
+
+        :returns: the result
+        :rtype: dict
+        :raises: AQLQueryCacheDeleteError
+        """
+        res = self._conn.delete('/_api/query-cache')
+        if res.status_code not in HTTP_OK:
+            raise AQLQueryCacheDeleteError(res)
+        return not res.body['error']
 
     ################
     # Transactions #

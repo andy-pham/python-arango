@@ -79,7 +79,7 @@ class WriteAheadLogSetError(ArangoError):
     """Failed to configure the write-ahead log."""
 
 
-class TimeGetError(ArangoError):
+class SystemTimeGetError(ArangoError):
     """Failed to return the current system time."""
 
 
@@ -91,7 +91,7 @@ class SleepError(ArangoError):
     """Failed to suspend the execution."""
 
 
-class RequiredDatabaseVersionGetError(ArangoError):
+class TargetVersionGetError(ArangoError):
     """Failed to retrieve the required database version."""
 
 
@@ -99,7 +99,7 @@ class ShutdownError(ArangoError):
     """Failed to initiate a clean shutdown sequence."""
 
 
-class TestsRunError(ArangoError):
+class TestsExecuteError(ArangoError):
     """Failed to execute the specified tests on the server."""
 
 
@@ -191,7 +191,7 @@ class CollectionCorruptedError(Exception):
     """The collection is corrupted (i.e. its status is ``unknown``)."""
 
 
-class CollectionNotFoundError(NotFoundError):
+class CollectionNotFoundError(ArangoError):
     """Failed to find the collection."""
 
 
@@ -257,7 +257,7 @@ class DocumentsExportError(ArangoError):
 #######################
 
 
-class DocumentInvalidError(Exception):
+class DocumentInvalidError(ArangoError):
     """The document is invalid (malformed)."""
 
 

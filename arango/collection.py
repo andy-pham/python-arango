@@ -22,13 +22,13 @@ class Collection(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.client.Client
+        :type connection: arango.connection.Connection
         :param name: the name of this collection
         :type name: str
         """
         self._conn = connection
         self._name = name
-        self.type = "edge" if self.is_edge else "document"
+        self.type = 'document'
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
@@ -76,9 +76,7 @@ class Collection(object):
         :rtype: dict
         :raises: TypeError
         """
-        if not isinstance(key, str):
-            raise TypeError("Expecting a str.")
-        return self.document(key)
+        return self.get_document(key)
 
     def __contains__(self, key):
         """Return True if the document exists in this collection.
@@ -90,7 +88,7 @@ class Collection(object):
         :raises: DocumentGetError
         """
         res = self._conn.head(
-            "/_api/{}/{}/{}".format(self.type, self._name, key)
+            "/_api/document/{}/{}".format(self._name, key)
         )
         if res.status_code == 200:
             return True
@@ -100,7 +98,15 @@ class Collection(object):
             raise DocumentGetError(res)
 
     @property
-    def properties(self):
+    def name(self):
+        """Return the name of this collection.
+
+        :returns: the name of this collection
+        :rtype: str
+        """
+        return self._name
+
+    def get_properties(self):
         """Return the properties of this collection.
 
         :returns: the collection's id, status, key_options etc.
@@ -128,98 +134,7 @@ class Collection(object):
             "key_options": uncamelify(res.body["keyOptions"])
         }
 
-    @property
-    def id(self):
-        """Return the ID of this collection.
-
-        :returns: the ID of this collection
-        :rtype: str
-        :raises: CollectionGetError
-        """
-        return self.properties["id"]
-
-    @property
-    def status(self):
-        """Return the status of this collection.
-
-        :returns: the collection status
-        :rtype: str
-        :raises: CollectionGetError
-        """
-        return self.properties["status"]
-
-    @property
-    def key_options(self):
-        """Return this collection's key options.
-
-        :returns: the key options of this collection
-        :rtype: dict
-        :raises: CollectionGetError
-        """
-        return self.properties["key_options"]
-
-    @property
-    def wait_for_sync(self):
-        """Return True if this collection waits for changes to sync to disk.
-
-        :returns: True if collection waits for sync, False otherwise
-        :rtype: bool
-        :raises: CollectionGetError
-        """
-        return self.properties["wait_for_sync"]
-
-    @property
-    def journal_size(self):
-        """Return the journal size of this collection.
-
-        :returns: the journal size of this collection
-        :rtype: str
-        :raises: CollectionGetError
-        """
-        return self.properties["journal_size"]
-
-    @property
-    def is_volatile(self):
-        """Return True if this collection is kept in memory and not persistent.
-
-        :returns: True if the collection is volatile, False otherwise
-        :rtype: bool
-        :raises: CollectionGetError
-        """
-        return self.properties["is_volatile"]
-
-    @property
-    def is_system(self):
-        """Return True if this collection is a system Collection.
-
-        :returns: True if system collection, False otherwise
-        :rtype: bool
-        :raises: CollectionGetError
-        """
-        return self.properties["is_system"]
-
-    @property
-    def is_edge(self):
-        """Return True if this collection is a system Collection.
-
-        :returns: True if edge collection, False otherwise
-        :rtype: bool
-        :raises: CollectionGetError
-        """
-        return self.properties["is_edge"]
-
-    @property
-    def is_compacted(self):
-        """Return True if this collection is compacted.
-
-        :returns: True if collection is compacted, False otherwise
-        :rtype: bool
-        :raises: CollectionGetError
-        """
-        return self.properties["do_compact"]
-
-    @property
-    def statistics(self):
+    def get_statistics(self):
         """Return the statistics of this collection.
 
         :returns: the statistics of this collection
@@ -233,8 +148,7 @@ class Collection(object):
             raise CollectionGetError(res)
         return uncamelify(res.body["figures"])
 
-    @property
-    def revision(self):
+    def get_revision(self):
         """Return the revision of this collection.
 
         :returns: the collection revision (etag)
@@ -328,11 +242,7 @@ class Collection(object):
     # Document Management #
     #######################
 
-    def doc(self, key, rev=None, match=True):
-        """Alias for self.document."""
-        return self.document(key, rev, match)
-
-    def document(self, key, rev=None, match=True):
+    def get_document(self, key, rev=None, match=True):
         """Return the document of the given key.
 
         If the document revision ``rev`` is specified, it is compared
@@ -351,7 +261,7 @@ class Collection(object):
         :raises: DocumentRevisionError, DocumentGetError
         """
         res = self._conn.get(
-            "/_api/{}/{}/{}".format(self.type, self._name, key),
+            "/_api/document/{}/{}".format(self._name, key),
             headers={
                 "If-Match" if match else "If-None-Match": rev
             } if rev else {}
@@ -364,8 +274,8 @@ class Collection(object):
             raise DocumentGetError(res)
         return res.body
 
-    def create_document(self, data, wait_for_sync=False, _batch=False):
-        """Create a new document to this collection.
+    def insert_document(self, data, wait_for_sync=False, batch=False):
+        """Insert a new document to this collection.
 
         If ``data`` contains the ``_key`` key, its value must be free.
         If this collection is an edge collection, ``data`` must contain the
@@ -377,34 +287,34 @@ class Collection(object):
         :type wait_for_sync: bool
         :returns: the id, rev and key of the new document
         :rtype: dict
-        :raises: DocumentInvalidError, DocumentCreateError
+        :raises:
+            DocumentCreateError,
+            DocumentInvalidError,
+            CollectionNotFoundError
         """
-        if self.type is "edge":
-            if "_to" not in data:
-                raise DocumentInvalidError(
-                    "the new document data is missing the '_to' key")
-            if "_from" not in data:
-                raise DocumentInvalidError(
-                    "the new document data is missing the '_from' key")
-        path = "/_api/{}".format(self.type)
+        path = "/_api/document"
         params = {
             "collection": self._name,
             "waitForSync": wait_for_sync,
         }
-        if "_from" in data:
-            params["from"] = data["_from"]
-        if "_to" in data:
-            params["to"] = data["_to"]
-        if _batch:
+        if batch:
             return {
                 "method": "post",
                 "path": path,
                 "data": data,
                 "params": params,
             }
-        res = self._conn.post(endpoint=path, data=data, params=params)
+        res = self._conn.post(
+            endpoint=path,
+            data=data,
+            params=params
+        )
         if res.status_code not in HTTP_OK:
             raise DocumentCreateError(res)
+        elif res.status_code == 400:
+            raise DocumentInvalidError(res)
+        elif res.status_code == 404:
+            raise CollectionNotFoundError(res)
         return res.body
 
     def update_document(self, key, data, rev=None, keep_none=True,
@@ -464,7 +374,7 @@ class Collection(object):
         return res.body
 
     def replace_document(self, key, data, rev=None, wait_for_sync=False,
-                         _batch=False):
+                         batch=False):
         """Replace the specified document in this collection.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -496,7 +406,7 @@ class Collection(object):
             params["rev"] = data["_rev"]
             params["policy"] = "error"
         path = "/_api/{}/{}/{}".format(self.type, self._name, key)
-        if _batch:
+        if batch:
             return {
                 "method": "put",
                 "path": path,

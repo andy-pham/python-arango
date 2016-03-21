@@ -4,7 +4,7 @@ import unittest
 
 from arango import Arango
 from arango.utils import is_str
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_db_name
 )
 

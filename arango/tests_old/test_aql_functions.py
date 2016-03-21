@@ -6,7 +6,7 @@ from arango import Arango
 from arango.exceptions import (
     AQLFunctionCreateError,
 )
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_db_name
 )
 

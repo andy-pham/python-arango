@@ -20,7 +20,7 @@ class Graph(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.client.Client
+        :type connection: arango.connection.Connection
         :param name: the name of this graph
         :type name: str
         """
@@ -45,6 +45,15 @@ class Graph(object):
         if res.status_code not in HTTP_OK:
             raise GraphPropertyError(res)
         return uncamelify(res.body["graph"])
+
+    @property
+    def name(self):
+        """Return the name of this graph.
+
+        :returns: the name of this graph
+        :rtype: str
+        """
+        return self._name
 
     @property
     def id(self):

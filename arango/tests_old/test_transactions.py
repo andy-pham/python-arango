@@ -2,7 +2,7 @@
 
 import unittest
 from arango import Arango
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_db_name,
     generate_col_name,
 )

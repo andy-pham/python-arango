@@ -3,7 +3,7 @@
 import unittest
 
 from arango import Arango
-from arango.tests.utils import (
+from arango.tests_old.utils import (
     generate_user_name
 )
 from arango.exceptions import (
@@ -31,13 +31,13 @@ class UserManagementTest(unittest.TestCase):
             {"active": True, "change_password": False, "extra": {}}
         )
         self.assertEqual(
-            self.arango.user(self.username),
+            self.arango.get_user(self.username),
             {"active": True, "change_password": False, "extra": {}}
         )
         # Retrieving a non-existing user should fail
         self.assertRaises(
             UserNotFoundError,
-            self.arango.user,
+            self.arango.get_user,
             username=generate_user_name(self.arango)
         )
 
@@ -57,7 +57,7 @@ class UserManagementTest(unittest.TestCase):
         )
         self.assertIn(self.username, self.arango.list_users())
         self.assertEqual(
-            self.arango.user(username=self.username),
+            self.arango.get_user(username=self.username),
             {
                 "active": True,
                 "change_password": True,
@@ -91,7 +91,7 @@ class UserManagementTest(unittest.TestCase):
             }
         )
         self.assertEqual(
-            self.arango.user(username=self.username),
+            self.arango.get_user(username=self.username),
             {
                 "active": True,
                 "change_password": True,
@@ -125,7 +125,7 @@ class UserManagementTest(unittest.TestCase):
             }
         )
         self.assertEqual(
-            self.arango.user(username=self.username),
+            self.arango.get_user(username=self.username),
             {
                 "active": True,
                 "change_password": False,
