@@ -19,9 +19,9 @@ class SimpleQueriesTest(unittest.TestCase):
         self.db = self.arango.create_database(self.db_name)
         self.col_name = generate_col_name(self.db)
         self.col = self.db.create_collection(self.col_name)
-        self.col.create_geo_index(["coord"])
-        self.col.create_skiplist_index(["value"])
-        self.col.create_fulltext_index(["text"])
+        self.col.add_geo_index(["coord"])
+        self.col.add_skiplist_index(["value"])
+        self.col.add_fulltext_index(["text"])
 
         # Test database cleanup
         self.addCleanup(self.arango.drop_database,
@@ -29,7 +29,7 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_first(self):
         self.assertEqual(strip_system_keys(self.col.first(1)), [])
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01"},
             {"name": "test_doc_02"},
             {"name": "test_doc_03"}
@@ -46,7 +46,7 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_last(self):
         self.assertEqual(strip_system_keys(self.col.last(1)), [])
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01"},
             {"name": "test_doc_02"},
             {"name": "test_doc_03"}
@@ -62,7 +62,7 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_all(self):
         self.assertEqual(list(self.col.all()), [])
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01"},
             {"name": "test_doc_02"},
             {"name": "test_doc_03"}
@@ -76,13 +76,13 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_any(self):
         self.assertEqual(strip_system_keys(self.col.all()), [])
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01"},
             {"name": "test_doc_02"},
             {"name": "test_doc_03"}
         ])
         self.assertIn(
-            strip_system_keys(self.col.any()),
+            strip_system_keys(self.col.random()),
             [
                 {"name": "test_doc_01"},
                 {"name": "test_doc_02"},
@@ -92,15 +92,15 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_get_first_example(self):
         self.assertEqual(
-            self.col.get_first_example({"value": 1}), None
+            self.col.find_one({"value": 1}), None
         )
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
         self.assertIn(
-            strip_system_keys(self.col.get_first_example({"value": 1})),
+            strip_system_keys(self.col.find_one({"value": 1})),
             [
                 {"name": "test_doc_01", "value": 1},
                 {"name": "test_doc_02", "value": 1}
@@ -108,60 +108,60 @@ class SimpleQueriesTest(unittest.TestCase):
         )
 
     def test_get_by_example(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        docs = strip_system_keys(self.col.get_by_example({"value": 1}))
+        docs = strip_system_keys(self.col.find_many({"value": 1}))
         self.assertIn({"name": "test_doc_01", "value": 1}, docs)
         self.assertIn({"name": "test_doc_02", "value": 1}, docs)
         self.assertEqual(
-            strip_system_keys(self.col.get_by_example({"value": 2})), []
+            strip_system_keys(self.col.find_many({"value": 2})), []
         )
         self.assertTrue(
-            len(list(self.col.get_by_example({"value": 1}, limit=1))), 1
+            len(list(self.col.find_many({"value": 1}, limit=1))), 1
         )
 
     def test_update_by_example(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.update_by_example({"value": 1}, {"value": 2})
+        self.col.find_and_update({"value": 1}, {"value": 2})
         docs = strip_system_keys(self.col.all())
         self.assertIn({"name": "test_doc_01", "value": 2}, docs)
         self.assertIn({"name": "test_doc_02", "value": 2}, docs)
         self.assertIn({"name": "test_doc_03", "value": 3}, docs)
 
     def test_replace_by_example(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.replace_by_example({"value": 1}, {"foo": "bar"})
+        self.col.find_and_replace({"value": 1}, {"foo": "bar"})
 
         docs = strip_system_keys(self.col.all())
         self.assertIn({"foo": "bar"}, docs)
         self.assertIn({"name": "test_doc_03", "value": 3}, docs)
 
     def test_remove_by_example(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.remove_by_example({"value": 1})
-        self.col.remove_by_example({"value": 2})
+        self.col.find_and_delete({"value": 1})
+        self.col.find_and_delete({"value": 2})
         self.assertEqual(
             strip_system_keys(self.col.all()),
             [{"name": "test_doc_03", "value": 3}]
         )
 
     def test_range(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
             {"name": "test_doc_02", "value": 2},
             {"name": "test_doc_03", "value": 3},
@@ -186,7 +186,7 @@ class SimpleQueriesTest(unittest.TestCase):
         )
 
     def test_near(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "coord": [1, 1]},
             {"name": "test_doc_02", "coord": [1, 4]},
             {"name": "test_doc_03", "coord": [4, 1]},
@@ -206,14 +206,14 @@ class SimpleQueriesTest(unittest.TestCase):
         )
 
     def test_fulltext(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"name": "test_doc_01", "text": "Hello World!"},
             {"name": "test_doc_02", "text": "foo"},
             {"name": "test_doc_03", "text": "bar"},
             {"name": "test_doc_03", "text": "baz"},
         ])
         self.assertEqual(
-            strip_system_keys(self.col.fulltext("text", "foo,|bar")),
+            strip_system_keys(self.col.find_text("text", "foo,|bar")),
             [
                 {"name": "test_doc_02", "text": "foo"},
                 {"name": "test_doc_03", "text": "bar"},
@@ -221,7 +221,7 @@ class SimpleQueriesTest(unittest.TestCase):
         )
 
     def test_lookup_by_keys(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "key01", "value": 1},
             {"_key": "key02", "value": 2},
             {"_key": "key03", "value": 3},
@@ -231,7 +231,7 @@ class SimpleQueriesTest(unittest.TestCase):
         ])
         self.assertEqual(
             strip_system_keys(
-                self.col.lookup_by_keys(["key01", "key03", "key06"])
+                self.col.get_many(["key01", "key03", "key06"])
             ),
             [
                 {"value": 1},
@@ -242,7 +242,7 @@ class SimpleQueriesTest(unittest.TestCase):
         self.assertEqual(len(self.col), 6)
 
     def test_remove_by_keys(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "key01", "value": 1},
             {"_key": "key02", "value": 2},
             {"_key": "key03", "value": 3},
@@ -251,7 +251,7 @@ class SimpleQueriesTest(unittest.TestCase):
             {"_key": "key06", "value": 6},
         ])
         self.assertEqual(
-            self.col.remove_by_keys(["key01", "key03", "key06"]),
+            self.col.delete_many(["key01", "key03", "key06"]),
             {"removed": 3, "ignored": 0}
         )
         leftover = strip_system_keys(self.col.all())

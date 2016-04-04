@@ -38,7 +38,7 @@ class BatchRequestTest(unittest.TestCase):
             action=action,
             read_collections=[self.col_name01, self.col_name02],
             write_collections=[self.col_name01, self.col_name02],
-            wait_for_sync=True,
+            sync=True,
             lock_timeout=10000
         )
         self.assertEqual(res, "success!")
@@ -62,7 +62,7 @@ class BatchRequestTest(unittest.TestCase):
             read_collections=[self.col_name01, self.col_name02],
             write_collections=[self.col_name01, self.col_name02],
             params=params,
-            wait_for_sync=True,
+            sync=True,
             lock_timeout=10000
         )
 

@@ -109,7 +109,7 @@ my_col.statistics()
 my_col.revision()
 
 # Update collection properties (only the modifiable ones)
-my_col.wait_for_sync = False
+my_col.sync = False
 my_col.journal_size = new_journal_size
 
 # Load the collection into memory
@@ -379,27 +379,27 @@ my_db.execute_batch([
     (
         my_col.create_document,             # method name
         [{"_key": "doc04", "value": 1}],    # args
-        {"wait_for_sync": True}             # kwargs
+        {"sync": True}             # kwargs
     ),
     (
         my_col.update_document,
         ["doc01", {"value": 2}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
     (
         my_col.replace_document,
         ["doc02", {"new_value": 3}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
     (
         my_col.delete_document,
         ["doc03"],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
     (
         my_col.create_document,
         [{"_key": "doc05", "value": 5}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
 ])
 
@@ -408,17 +408,17 @@ self.db.execute_batch([
     (
         my_graph.create_vertex,
         ["vcol01", {"_key": "v01", "value": 1}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
     (
         my_graph.create_vertex,
         ["vcol01", {"_key": "v02", "value": 2}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
     (
         my_graph.create_vertex,
         ["vcol01", {"_key": "v03", "value": 3}],
-        {"wait_for_sync": True}
+        {"sync": True}
     ),
 ])
 ```
@@ -440,7 +440,7 @@ res = my_db.execute_transaction(
     action=action,
     read_collections=["col01", "col02"],
     write_collections=["col01", "col02"],
-    wait_for_sync=True,
+    sync=True,
     lock_timeout=10000
 )
 ```
@@ -500,7 +500,7 @@ a.write_ahead_log
 
 # Flush the write-ahead log
 a.flush_write_ahead_log(
-    wait_for_sync=True, 
+    sync=True, 
     wait_for_gc=True
 )
 

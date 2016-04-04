@@ -24,7 +24,7 @@ class EdgeManagementTest(unittest.TestCase):
         # Create the test edge collection
         self.edge_col_name = generate_col_name(self.db)
         self.edge_col = self.db.create_collection(
-            self.edge_col_name, is_edge=True
+            self.edge_col_name, edge=True
         )
         # Create the test graph
         self.graph_name = generate_graph_name(self.db)

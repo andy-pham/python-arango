@@ -1,12 +1,10 @@
-"""Test the collection.py module."""
-
 from __future__ import absolute_import, unicode_literals
 
 import random
 from datetime import datetime
-from six import string_types
 
 import pytest
+from six import string_types
 
 from arango import Arango
 from arango.constants import DEFAULT_DB
@@ -44,22 +42,47 @@ def test_properties():
     assert 'ArangoDB API driver' in repr(driver)
 
 
-def test_get_version():
-    version = driver.get_version()
+def test_server_version():
+    version = driver.server_version()
     assert isinstance(version, string_types)
 
-    details = driver.get_version(details=True)
+
+def test_server_details():
+    details = driver.server_details()
     assert 'architecture' in details
     assert 'server-version' in details
 
 
-def test_get_target_version():
-    target_version = driver.get_target_version()
-    assert isinstance(target_version, string_types)
+def test_target_version():
+    version = driver.target_version()
+    assert isinstance(version, string_types)
 
 
-def test_get_system_time():
-    system_time = driver.get_system_time()
+def test_server_statistics():
+    statistics = driver.server_statistics(description=False)
+    assert isinstance(statistics, dict)
+    assert 'time' in statistics
+    assert 'system' in statistics
+    assert 'server' in statistics
+
+    description = driver.server_statistics(description=True)
+    assert isinstance(description, dict)
+    assert 'figures' in description
+    assert 'groups' in description
+
+
+def test_server_role():
+    assert driver.server_role() in {
+        'SINGLE',
+        'COORDINATOR',
+        'PRIMARY',
+        'SECONDARY',
+        'UNDEFINED'
+    }
+
+
+def test_server_time():
+    system_time = driver.server_time()
     assert isinstance(system_time, datetime)
 
 
@@ -80,53 +103,38 @@ def test_sleep():
 #     assert isinstance(driver.shutdown(), bool)
 
 
-# def test_execute_tests():
-#     assert isinstance(driver.execute_tests, dict)
+# def test_run_tests():
+#     assert isinstance(driver.run_tests, dict)
 
 
-def test_execute_javascript():
-    assert driver.execute_javascript('return 1') == '1'
-    assert driver.execute_javascript('return "test"') == '"test"'
+def test_run_program():
+    assert driver.run_program('return 1') == '1'
+    assert driver.run_program('return "test"') == '"test"'
     with pytest.raises(ProgramExecuteError) as err:
-        driver.execute_javascript('return invalid')
+        driver.run_program('return invalid')
     assert err.value.message == 'Internal Server Error'
 
 
-def test_get_wal_config():
-    wal = driver.get_wal_config()
-    assert 'oversized_ops' in wal
-    assert 'log_size' in wal
-    assert 'historic_logs' in wal
-    assert 'reserve_logs' in wal
+# TODO test parameters
+def test_read_log():
+    log = driver.read_log()
+    assert 'lid' in log
+    assert 'level' in log
+    assert 'text' in log
+    assert 'total_amount' in log
 
 
-def test_set_wal_config():
-    driver.set_wal_config(
-        historic_logs=15,
-        oversized_ops=False,
-        log_size=30000000,
-        reserve_logs=5,
-        throttle_limit=1000,
-        throttle_wait=16000
-    )
-    wal = driver.get_wal_config()
-    assert wal['historic_logs'] == 15
-    assert wal['oversized_ops'] is False
-    assert wal['log_size'] == 30000000
-    assert wal['reserve_logs'] == 5
-    assert wal['throttle_limit'] == 1000
-    assert wal['throttle_wait'] == 16000
+def test_reload_routing():
+    result = driver.reload_routing()
+    assert isinstance(result, bool)
 
 
-def test_flush_wal():
-    assert isinstance(driver.flush_wal(), bool)
-
-
-def test_get_wal_transactions():
-    result = driver.get_wal_transactions()
-    assert 'count' in result
-    assert 'last_sealed' in result
-    assert 'last_collected' in result
+def test_endpoints():
+    endpoints = driver.endpoints()
+    assert isinstance(endpoints, list)
+    for endpoint in endpoints:
+        assert 'databases' in endpoint
+        assert 'endpoint' in endpoint
 
 
 # TODO something wrong here
@@ -179,7 +187,45 @@ def test_database_mgnt():
     assert result is False
 
 
-def test_list_users():
+def test_wal_options():
+    options = driver.wal_options()
+    assert 'oversized_ops' in options
+    assert 'log_size' in options
+    assert 'historic_logs' in options
+    assert 'reserve_logs' in options
+
+
+def test_set_wal_options():
+    driver.set_wal_options(
+        historic_logs=15,
+        oversized_ops=False,
+        log_size=30000000,
+        reserve_logs=5,
+        throttle_limit=1000,
+        throttle_wait=16000
+    )
+    options = driver.wal_options()
+    assert options['historic_logs'] == 15
+    assert options['oversized_ops'] is False
+    assert options['log_size'] == 30000000
+    assert options['reserve_logs'] == 5
+    assert options['throttle_limit'] == 1000
+    assert options['throttle_wait'] == 16000
+
+
+def test_flush_wal():
+    assert isinstance(driver.flush_wal(), bool)
+
+
+def test_wal_transactions():
+    result = driver.wal_transactions()
+    assert 'count' in result
+    assert 'last_sealed' in result
+    assert 'last_collected' in result
+
+
+def test_user_management():
+    # Test get users
     users = driver.list_users()
     assert isinstance(users, dict)
     assert 'root' in users
@@ -189,16 +235,6 @@ def test_list_users():
     assert 'extra'in root_user
     assert 'change_password' in root_user
 
-
-def test_get_user():
-    root_user = driver.get_user('root')
-    assert root_user['user'] == 'root'
-    assert 'active' in root_user
-    assert 'change_password' in root_user
-    assert 'extra' in root_user
-
-
-def test_user_mgnt():
     assert username not in driver.list_users()
 
     # Test create user
@@ -281,53 +317,11 @@ def test_user_mgnt():
     assert result is False
 
 
-# TODO test parameters
-def test_get_log():
-    log = driver.get_log()
-    assert 'lid' in log
-    assert 'level' in log
-    assert 'text' in log
-    assert 'total_amount' in log
+def test_task_management():
+    global task_id
 
-
-def test_reload_routing():
-    result = driver.reload_routing()
-    assert isinstance(result, bool)
-
-
-def test_get_statistics():
-    statistics = driver.get_statistics(description=False)
-    assert isinstance(statistics, dict)
-    assert 'time' in statistics
-    assert 'system' in statistics
-    assert 'server' in statistics
-
-    description = driver.get_statistics(description=True)
-    assert isinstance(description, dict)
-    assert 'figures' in description
-    assert 'groups' in description
-
-
-def test_get_role():
-    assert driver.get_role() in {
-        'SINGLE',
-        'COORDINATOR',
-        'PRIMARY',
-        'SECONDARY',
-        'UNDEFINED'
-    }
-
-
-def test_get_endpoints():
-    endpoints = driver.get_endpoints()
-    assert isinstance(endpoints, list)
-    for endpoint in endpoints:
-        assert 'databases' in endpoint
-        assert 'endpoint' in endpoint
-
-
-def test_get_tasks():
-    tasks = driver.list_tasks()
+    # Test get tasks
+    tasks = driver.get_tasks()
     assert isinstance(tasks, dict)
     for task in tasks.values():
         assert 'command' in task
@@ -336,22 +330,17 @@ def test_get_tasks():
         assert 'id' in task
         assert 'name' in task
 
-
-def test_get_task():
-    tasks = driver.list_tasks()
+    # Test get task
+    tasks = driver.get_tasks()
     if tasks:
         chosen_task_id = random.choice(tasks.keys())
         retrieved_task = driver.get_task(chosen_task_id)
         assert tasks[chosen_task_id] == retrieved_task
 
-
-def test_task_mgnt():
-    global task_id
-
     cmd = "(function(params) { require('internal').print(params); })(params)"
 
     # Test create task
-    assert task_name not in driver.list_tasks()
+    assert task_name not in driver.get_tasks()
     task = driver.create_task(
         name=task_name,
         command=cmd,
@@ -360,8 +349,8 @@ def test_task_mgnt():
         offset=3,
     )
     task_id = task['id']
-    assert task_id in driver.list_tasks()
-    assert task_name == driver.list_tasks()[task_id]['name']
+    assert task_id in driver.get_tasks()
+    assert task_name == driver.get_tasks()[task_id]['name']
 
     # Test get after create task
     task = driver.get_task(task_id)
@@ -383,7 +372,7 @@ def test_task_mgnt():
     # Test delete task
     result = driver.delete_task(task['id'])
     assert result is True
-    assert task_id not in driver.list_tasks()
+    assert task_id not in driver.get_tasks()
 
     # Test delete missing task
     with pytest.raises(TaskDeleteError):
@@ -402,6 +391,10 @@ def test_task_mgnt():
         period=3,
         offset=4,
     )
+    assert task['id'] == task_id
+    assert task['command'] == cmd
+    assert task['name'] == task_name
+    assert task['period'] == 3
 
     # Test get after create task with ID
     task = driver.get_task(task_id)
@@ -409,3 +402,50 @@ def test_task_mgnt():
     assert task['command'] == cmd
     assert task['name'] == task_name
     assert task['period'] == 3
+
+
+# def test_execute_transaction():
+#     # Test execute transaction with no params
+#     action = """
+#         function () {{
+#             var db = require('internal').db;
+#             db.{col}.save({{ _key: 'doc1'}});
+#             db.{col}.save({{ _key: 'doc2'}});
+#             return 'success!';
+#         }}
+#     """.format(col=col_name)
+#
+#     result = db.execute_transaction(
+#         action=action,
+#         read_collections=[col_name],
+#         write_collections=[col_name],
+#         sync=True,
+#         lock_timeout=10000
+#     )
+#     assert result == 'success!'
+#     assert 'doc1' in collection
+#     assert 'doc2' in collection
+#
+#     # Test execute transaction with params
+#     action = """
+#         function (params) {{
+#             var db = require('internal').db;
+#             db.{col}.save({{ _key: 'doc3', val: params.val1 }});
+#             db.{col}.save({{ _key: 'doc4', val: params.val2 }});
+#             return 'success!';
+#         }}
+#     """.format(col=col_name)
+#
+#     result = db.execute_transaction(
+#         action=action,
+#         read_collections=[col_name],
+#         write_collections=[col_name],
+#         params={"val1": 1, "val2": 2},
+#         sync=True,
+#         lock_timeout=10000
+#     )
+#     assert result == 'success!'
+#     assert 'doc3' in collection
+#     assert 'doc4' in collection
+#     assert collection["doc3"]["val"] == 1
+#     assert collection["doc4"]["val"] == 2

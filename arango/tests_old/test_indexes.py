@@ -35,11 +35,11 @@ class IndexManagementTest(unittest.TestCase):
                 "fields": ["_key"],
                 "unique": True
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_hash_index(self):
-        self.col.create_hash_index(["attr1", "attr2"], unique=True)
+        self.col.add_hash_index(["attr1", "attr2"], unique=True)
         self.assertIn(
             {
                 "selectivity_estimate": 1,
@@ -48,11 +48,11 @@ class IndexManagementTest(unittest.TestCase):
                 "fields": ["attr1", "attr2"],
                 "unique": True
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_cap_constraint(self):
-        self.col.create_cap_constraint(size=10, byte_size=40000)
+        self.col.add_cap_constraint(size=10, byte_size=40000)
         self.assertIn(
             {
                 "type": "cap",
@@ -60,11 +60,11 @@ class IndexManagementTest(unittest.TestCase):
                 "byte_size": 40000,
                 "unique": False
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_skiplist_index(self):
-        self.col.create_skiplist_index(["attr1", "attr2"], unique=True)
+        self.col.add_skiplist_index(["attr1", "attr2"], unique=True)
         self.assertIn(
             {
                 "sparse": False,
@@ -72,11 +72,11 @@ class IndexManagementTest(unittest.TestCase):
                 "fields": ["attr1", "attr2"],
                 "unique": True
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_geo_index_with_one_attr(self):
-        self.col.create_geo_index(
+        self.col.add_geo_index(
             fields=["attr1"],
             geo_json=False,
         )
@@ -90,11 +90,11 @@ class IndexManagementTest(unittest.TestCase):
                 "ignore_null": True,
                 "constraint": False
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_geo_index_with_two_attrs(self):
-        self.col.create_geo_index(
+        self.col.add_geo_index(
             fields=["attr1", "attr2"],
             geo_json=False,
         )
@@ -107,23 +107,23 @@ class IndexManagementTest(unittest.TestCase):
                 "ignore_null": True,
                 "constraint": False
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_create_geo_index_with_more_than_two_attrs(self):
         self.assertRaises(
             IndexCreateError,
-            self.col.create_geo_index,
+            self.col.add_geo_index,
             fields=["attr1", "attr2", "attr3"]
         )
 
     def test_create_fulltext_index(self):
         self.assertRaises(
             IndexCreateError,
-            self.col.create_fulltext_index,
+            self.col.add_fulltext_index,
             fields=["attr1", "attr2"]
         )
-        self.col.create_fulltext_index(
+        self.col.add_fulltext_index(
             fields=["attr1"],
             min_length=10,
         )
@@ -135,24 +135,24 @@ class IndexManagementTest(unittest.TestCase):
                 "min_length": 10,
                 "unique": False,
             },
-            self.col.indexes.values()
+            self.col.list_indexes.values()
         )
 
     def test_delete_index(self):
-        old_indexes = set(self.col.indexes)
-        self.col.create_hash_index(["attr1", "attr2"], unique=True)
-        self.col.create_skiplist_index(["attr1", "attr2"], unique=True)
-        self.col.create_fulltext_index(
+        old_indexes = set(self.col.list_indexes)
+        self.col.add_hash_index(["attr1", "attr2"], unique=True)
+        self.col.add_skiplist_index(["attr1", "attr2"], unique=True)
+        self.col.add_fulltext_index(
             fields=["attr1"],
             min_length=10,
         )
-        new_indexes = set(self.col.indexes)
+        new_indexes = set(self.col.list_indexes)
         self.assertNotEqual(old_indexes, new_indexes)
 
         for index_id in new_indexes - old_indexes:
             self.col.delete_index(index_id)
 
-        self.assertEqual(old_indexes, set(self.col.indexes))
+        self.assertEqual(old_indexes, set(self.col.list_indexes))
 
 
 if __name__ == "__main__":

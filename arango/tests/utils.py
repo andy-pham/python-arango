@@ -1,8 +1,4 @@
-"""Utility functions used for testing."""
-
 from __future__ import absolute_import, unicode_literals
-
-import collections
 
 
 def generate_db_name(driver):
@@ -29,7 +25,7 @@ def generate_col_name(database):
     :rtype: str
     """
     num = 0
-    existing = set(database.list_collections(user_only=False))
+    existing = set(database.list_collections())
     while "test_collection_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_collection_{num:03d}".format(num=num)
@@ -59,7 +55,7 @@ def generate_task_name(driver):
     :rtype: str
     """
     num = 0
-    existing = set(task['name'] for task in driver.list_tasks().values())
+    existing = set(task['name'] for task in driver.get_tasks().values())
     while "test_task_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_task_{num:03d}".format(num=num)
@@ -78,20 +74,3 @@ def generate_user_name(driver):
     while "test_user_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_user_{num:03d}".format(num=num)
-
-
-def strip_system_keys(obj):
-    """Return the document(s) with all the system keys deleted.
-
-    :param obj: document(s)
-    :type obj: list or dict
-    :returns: the document(s) with the system keys deleted
-    :rtype: list or dict
-    """
-    if isinstance(obj, collections.Mapping):
-        return {k: v for k, v in obj.items() if not k.startswith("_")}
-    elif isinstance(obj, collections.Iterable):
-        return [
-            {k: v for k, v in document.items() if not k.startswith("_")}
-            for document in obj
-        ]

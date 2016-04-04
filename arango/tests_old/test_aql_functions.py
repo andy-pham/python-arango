@@ -24,12 +24,12 @@ class AQLFunctionManagementTest(unittest.TestCase):
                         name=self.db_name, safe_delete=True)
 
     def test_create_valid_aql_function(self):
-        self.db.create_aql_function(
+        self.db.create_function(
             "myfunctions::temperature::celsiustofahrenheit",
             "function (celsius) { return celsius * 1.8 + 32; }"
         )
         self.assertEqual(
-            self.db.list_aql_functions,
+            self.db.aql_functions,
             {
                 "myfunctions::temperature::celsiustofahrenheit": (
                     "function (celsius) { return celsius * 1.8 + 32; }"
@@ -40,32 +40,32 @@ class AQLFunctionManagementTest(unittest.TestCase):
     def test_create_invalid_aql_function(self):
         self.assertRaises(
             AQLFunctionCreateError,
-            self.db.create_aql_function,
+            self.db.create_function,
             "myfunctions::temperature::celsiustofahrenheit",
             "function (celsius) { invalid syntax }"
         )
 
     def test_delete_aql_function(self):
-        self.db.create_aql_function(
+        self.db.create_function(
             "myfunctions::temperature::celsiustofahrenheit",
             "function (celsius) { return celsius * 1.8 + 32; }"
         )
-        self.db.delete_aql_function(
+        self.db.delete_function(
             "myfunctions::temperature::celsiustofahrenheit",
         )
-        self.assertEqual(self.db.list_aql_functions, {})
+        self.assertEqual(self.db.aql_functions, {})
 
     # TODO create functions within function
     def test_delete_aql_functions_by_group(self):
-        self.db.create_aql_function(
+        self.db.create_function(
             "myfunctions::temperature::celsiustofahrenheit",
             "function (celsius) { return celsius * 1.8 + 32; }"
         )
-        self.db.delete_aql_function(
+        self.db.delete_function(
             "myfunctions::temperature::celsiustofahrenheit",
             group=True
         )
-        self.assertEqual(self.db.list_aql_functions, {})
+        self.assertEqual(self.db.aql_functions, {})
 
 
 if __name__ == "__main__":

@@ -101,7 +101,7 @@ class DocumentManagementTest(unittest.TestCase):
             {"_key": 1}  # invalid key
         ]
         # This should succeed partially
-        res = self.col.import_documents(documents, complete=False)
+        res = self.col.insert_many(documents, complete=False)
         self.assertEqual(len(self.col), 2)
         self.assertIn("test_doc_01", self.col)
         self.assertIn("test_doc_01", self.col)
@@ -111,14 +111,14 @@ class DocumentManagementTest(unittest.TestCase):
         self.col.truncate()
         self.assertRaises(
             DocumentsImportError,
-            self.col.import_documents,
+            self.col.insert_many,
             documents,
             complete=True
         )
         self.assertEqual(len(self.col), 0)
         # This should succeed completely since all documents are valid
         self.col.truncate()
-        res = self.col.import_documents(documents[:2], complete=True)
+        res = self.col.insert_many(documents[:2], complete=True)
         self.assertEqual(len(self.col), 2)
         self.assertEqual(res["errors"], 0)
         self.assertEqual(res["created"], 2)

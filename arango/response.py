@@ -14,10 +14,10 @@ class Response(object):
     :type url: str
     :param status_code: the HTTP status code
     :type status_code: int
-    :param content: the HTTP response content
-    :type content: basestring or str
     :param status_text: the HTTP status description if any
     :type status_text: str or None
+    :param body: the HTTP response body
+    :type body: str or dict
     """
 
     __slots__ = (

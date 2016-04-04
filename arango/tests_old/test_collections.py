@@ -4,7 +4,7 @@ import unittest
 
 from arango import Arango
 from arango.exceptions import (
-    CollectionRotateJournalError,
+    CollectionRotateError,
 )
 from arango.utils import is_str
 from arango.tests_old.utils import (
@@ -49,7 +49,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.db.create_collection(col_name)
         self.assertIn(col_name, self.db.list_collections["all"])
         # Delete the collection and ensure that it's gone
-        self.db.delete_collection(col_name)
+        self.db.drop_collection(col_name)
         self.assertNotIn(col_name, self.db.list_collections)
 
     def test_collection_create_with_config(self):
@@ -57,22 +57,22 @@ class CollectionManagementTest(unittest.TestCase):
         col_name = generate_col_name(self.db)
         col = self.db.create_collection(
             name=col_name,
-            wait_for_sync=True,
-            do_compact=False,
+            sync=True,
+            compact=False,
             journal_size=7774208,
-            is_system=False,
-            is_volatile=False,
-            key_generator_type="autoincrement",
-            allow_user_keys=False,
+            system=False,
+            volatile=False,
+            keygen="autoincrement",
+            user_keys=False,
             key_increment=9,
             key_offset=100,
-            is_edge=True,
-            number_of_shards=2,
+            edge=True,
+            shard_count=2,
             shard_keys=["test_attr"],
         )
         # Ensure that the new collection's properties are set correctly
         self.assertEqual(col.name, col_name)
-        self.assertTrue(col.get_revision, "0")
+        self.assertTrue(col.revision, "0")
         self.assertEqual(col.status, "loaded")
         self.assertEqual(col.journal_size, 7774208)
         self.assertEqual(col.checksum(), 0)
@@ -88,24 +88,24 @@ class CollectionManagementTest(unittest.TestCase):
         self.assertFalse(col.is_system)
         self.assertFalse(col.is_volatile)
         self.assertFalse(col.is_compacted)
-        self.assertTrue(col.wait_for_sync)
+        self.assertTrue(col.sync)
         self.assertTrue(col.is_edge)
         self.assertTrue(is_str(col.id))
-        self.assertTrue(isinstance(col.get_statistics(), dict))
+        self.assertTrue(isinstance(col.server_statistics(), dict))
 
     def test_collection_setters(self):
         # Create a new collection with predefined properties
         col = self.db.create_collection(
             name=generate_col_name(self.db),
-            wait_for_sync=False,
+            sync=False,
             journal_size=7774208
         )
-        self.assertFalse(col.wait_for_sync)
+        self.assertFalse(col.sync)
         self.assertEqual(col.journal_size, 7774208)
         # Change the properties of the graph and ensure that it went through
-        col.wait_for_sync = True
+        col.sync = True
         col.journal_size = 8884208
-        self.assertTrue(col.wait_for_sync)
+        self.assertTrue(col.sync)
         self.assertEqual(col.journal_size, 8884208)
 
     def test_collection_load_unload(self):
@@ -116,8 +116,8 @@ class CollectionManagementTest(unittest.TestCase):
     def test_collection_rotate_journal(self):
         col = self.db.create_collection(generate_col_name(self.db))
         self.assertRaises(
-            CollectionRotateJournalError,
-            col.rotate_journal
+            CollectionRotateError,
+            col.rotate
         )
 
 

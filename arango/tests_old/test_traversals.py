@@ -28,7 +28,7 @@ class EdgeManagementTest(unittest.TestCase):
         # Create the test edge collection
         self.edge_col_name = generate_col_name(self.db)
         self.edge_col = self.db.create_collection(
-            self.edge_col_name, is_edge=True
+            self.edge_col_name, edge=True
         )
         # Create the test graph
         self.graph_name = generate_graph_name(self.db)
@@ -91,7 +91,7 @@ class EdgeManagementTest(unittest.TestCase):
                         name=self.db_name, safe_delete=True)
 
     def test_basic_traversal(self):
-        visited = self.graph.execute_traversal(
+        visited = self.graph.traverse(
             "{}/{}".format(self.from_col_name, "from01"),
             direction="outbound"
         )["visited"]

@@ -11,7 +11,7 @@ def cursor(connection, response):
     """Continuously read from the server cursor and yield the result.
 
     :param connection: ArangoDB connection object
-    :type connection: arango.connection.Connection
+    :type connection: arango.connection.APIConnection
     :param response: ArangoDB response object
     :type response: arango.response.Response
     :raises: CursorExecuteError, CursorDeleteError

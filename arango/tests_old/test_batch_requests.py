@@ -25,7 +25,7 @@ class BatchRequestTest(unittest.TestCase):
         # Create the edge collection
         self.edge_col_name = generate_col_name(self.db)
         self.edge_col = self.db.create_collection(
-            self.edge_col_name, is_edge=True
+            self.edge_col_name, edge=True
         )
         # Create the graph
         self.graph_name = generate_graph_name(self.db)
@@ -54,7 +54,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.col.get_document("doc03")["value"], 3)
 
     def test_batch_document_replace(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "doc01", "value": 1},
             {"_key": "doc02", "value": 1},
             {"_key": "doc03", "value": 1}
@@ -69,7 +69,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.col.get_document("doc03")["value"], 2)
 
     def test_batch_document_update(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "doc01", "value": 1},
             {"_key": "doc02", "value": 1},
             {"_key": "doc03", "value": 1}
@@ -78,17 +78,17 @@ class BatchRequestTest(unittest.TestCase):
             (
                 self.col.update_document,
                 ["doc01", {"value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.update_document,
                 ["doc02", {"value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.update_document,
                 ["doc03", {"value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(self.col.get_document("doc01")["value"], 2)
@@ -96,7 +96,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.col.get_document("doc03")["value"], 2)
 
     def test_batch_document_Delete(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "doc01", "value": 1},
             {"_key": "doc02", "value": 1},
             {"_key": "doc03", "value": 1}
@@ -109,7 +109,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(len(self.col), 0)
 
     def test_batch_document_mixed(self):
-        self.col.import_documents([
+        self.col.insert_many([
             {"_key": "doc01", "value": 0},
             {"_key": "doc02", "value": 0},
             {"_key": "doc03", "value": 0}
@@ -118,27 +118,27 @@ class BatchRequestTest(unittest.TestCase):
             (
                 self.col.insert_document,
                 [{"_key": "doc04", "value": 1}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.update_document,
                 ["doc01", {"value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.replace_document,
                 ["doc02", {"new_value": 3}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.delete_document,
                 ["doc03"],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.col.insert_document,
                 [{"_key": "doc05", "value": 5}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(len(self.col), 4)
@@ -153,17 +153,17 @@ class BatchRequestTest(unittest.TestCase):
             (
                 self.graph.create_vertex,
                 [self.vertex_col_name, {"_key": "v01", "value": 1}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.create_vertex,
                 [self.vertex_col_name, {"_key": "v02", "value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.create_vertex,
                 [self.vertex_col_name, {"_key": "v03", "value": 3}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(self.vertex_col.get_document("v01")["value"], 1)
@@ -171,7 +171,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.vertex_col.get_document("v03")["value"], 3)
 
     def test_batch_vertex_replace(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -183,7 +183,7 @@ class BatchRequestTest(unittest.TestCase):
                     "{}/{}".format(self.vertex_col_name, "v01"),
                     {"new_val": 2}
                 ],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.replace_vertex,
@@ -191,7 +191,7 @@ class BatchRequestTest(unittest.TestCase):
                     "{}/{}".format(self.vertex_col_name, "v02"),
                     {"new_val": 3}
                 ],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.replace_vertex,
@@ -199,7 +199,7 @@ class BatchRequestTest(unittest.TestCase):
                     "{}/{}".format(self.vertex_col_name, "v03"),
                     {"new_val": 4}
                 ],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(self.vertex_col.get_document("v01")["new_val"], 2)
@@ -207,7 +207,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.vertex_col.get_document("v03")["new_val"], 4)
 
     def test_batch_vertex_update(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -216,17 +216,17 @@ class BatchRequestTest(unittest.TestCase):
             (
                 self.graph.update_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v01"), {"value": 2}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.update_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v02"), {"value": 3}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.update_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v03"), {"value": 4}],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(self.vertex_col.get_document("v01")["value"], 2)
@@ -234,7 +234,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.vertex_col.get_document("v03")["value"], 4)
 
     def test_batch_vertex_Delete(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -243,23 +243,23 @@ class BatchRequestTest(unittest.TestCase):
             (
                 self.graph.delete_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v01")],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.delete_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v02")],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
             (
                 self.graph.delete_vertex,
                 ["{}/{}".format(self.vertex_col_name, "v03")],
-                {"wait_for_sync": True}
+                {"sync": True}
             ),
         ])
         self.assertEqual(len(self.vertex_col), 0)
 
     def test_batch_edge_create(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -294,7 +294,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.edge_col.get_document("e02")["value"], 5)
 
     def test_batch_edge_replace(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -341,7 +341,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.edge_col.get_document("e02")["new_val"], 2)
 
     def test_batch_edge_update(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}
@@ -388,7 +388,7 @@ class BatchRequestTest(unittest.TestCase):
         self.assertEqual(self.edge_col.get_document("e02")["value"], 2)
 
     def test_batch_edge_Delete(self):
-        self.vertex_col.import_documents([
+        self.vertex_col.insert_many([
             {"_key": "v01", "value": 1},
             {"_key": "v02", "value": 1},
             {"_key": "v03", "value": 1}

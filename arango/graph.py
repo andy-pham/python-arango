@@ -1,6 +1,5 @@
 """ArangoDB Graph."""
 
-from arango.utils import uncamelify
 from arango.exceptions import *
 from arango.constants import HTTP_OK
 
@@ -20,22 +19,30 @@ class Graph(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
-        :param name: the name of this graph
+        :type connection: arango.connection.APIConnection
+        :param name: the name of the graph
         :type name: str
         """
         self._conn = connection
         self._name = name
 
     def __repr__(self):
-        """Return a descriptive string of this instance."""
+        """Return a descriptive string of the instance."""
         return "<ArangoDB graph '{}'>".format(self._name)
 
     @property
-    def properties(self):
-        """Return the properties of this graph.
+    def name(self):
+        """Return the name of the graph.
 
-        :returns: the properties of this graph
+        :returns: the name of the graph
+        :rtype: str
+        """
+        return self._name
+
+    def options(self):
+        """Return the properties of the graph.
+
+        :returns: the properties of the graph
         :rtype: dict
         :raises: GraphPropertiesError
         """
@@ -44,54 +51,23 @@ class Graph(object):
         )
         if res.status_code not in HTTP_OK:
             raise GraphPropertyError(res)
-        return uncamelify(res.body["graph"])
-
-    @property
-    def name(self):
-        """Return the name of this graph.
-
-        :returns: the name of this graph
-        :rtype: str
-        """
-        return self._name
-
-    @property
-    def id(self):
-        """Return the ID of this graph.
-
-        :returns: the ID of this graph
-        :rtype: str
-        :raises: GraphPropertiesError
-        """
-        return self.properties["_id"]
-
-    @property
-    def revision(self):
-        """Return the revision of this graph.
-
-        :returns: the revision of this graph
-        :rtype: str
-        :raises: GraphPropertiesError
-        """
-        return self.properties["_rev"]
+        return res.body["graph"]
 
     ################################
     # Vertex Collection Management #
     ################################
 
-    @property
-    def orphan_collections(self):
-        """Return the orphan collections of this graph.
+    def list_orphan_collections(self):
+        """Return the orphan collections of the graph.
 
         :returns: the string names of the orphan collections
         :rtype: list
         :raises: GraphPropertiesError
         """
-        return self.properties["orphan_collections"]
+        return self.options["orphan_collections"]
 
-    @property
-    def vertex_collections(self):
-        """Return the vertex collections of this graph.
+    def list_vertex_collections(self):
+        """Return the vertex collections of the graph.
 
         :returns: the string names of the vertex collections
         :rtype: list
@@ -105,7 +81,7 @@ class Graph(object):
         return res.body["collections"]
 
     def create_vertex_collection(self, collection):
-        """Create a vertex collection to this graph.
+        """Create a vertex collection to the graph.
 
         :param collection: the name of the vertex collection to create
         :type collection: str
@@ -119,11 +95,11 @@ class Graph(object):
         )
         if res.status_code not in HTTP_OK:
             raise VertexCollectionCreateError(res)
-        return self.vertex_collections
+        return self.list_vertex_collections
 
     def delete_vertex_collection(self, collection,
                                  drop_collection=False):
-        """Delete a vertex collection from this graph.
+        """Delete a vertex collection from the graph.
 
         :param collection: the name of the vertex collection to delete
         :type collection: str
@@ -131,29 +107,28 @@ class Graph(object):
         :type drop_collection: bool
         :returns: the updated list of the vertex collection names
         :rtype: list
-        :raises: VertexCollectionDeleteError
+        :raises: VertexCollectionDropError
         """
         res = self._conn.delete(
             "/_api/gharial/{}/vertex/{}".format(self._name, collection),
             params={"dropCollection": drop_collection}
         )
         if res.status_code not in HTTP_OK:
-            raise VertexCollectionDeleteError(res)
-        return self.vertex_collections
+            raise VertexCollectionDropError(res)
+        return self.list_vertex_collections
 
     ##############################
     # Edge Definition Management #
     ##############################
 
-    @property
-    def edge_definitions(self):
-        """Return the edge definitions of this graph.
+    def list_edge_definitions(self):
+        """Return the edge definitions of the graph.
 
         :returns: the edge definitions of this graph
         :rtype: list
         :raises: GraphPropertiesError
         """
-        return self.properties["edge_definitions"]
+        return self.options["edge_definitions"]
 
     def create_edge_definition(self, edge_collection, from_vertex_collections,
                                to_vertex_collections):
@@ -260,7 +235,7 @@ class Graph(object):
             raise VertexGetError(res)
         return res.body["vertex"]
 
-    def create_vertex(self, collection, data, wait_for_sync=False,
+    def create_vertex(self, collection, data, sync=False,
                       _batch=False):
         """Create a vertex to the specified vertex collection if this graph.
 
@@ -271,14 +246,14 @@ class Graph(object):
         :type collection: str
         :param data: the body of the new vertex
         :type data: dict
-        :param wait_for_sync: wait for the create to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for the create to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the new vertex
         :rtype: dict
         :raises: VertexCreateError
         """
         path = "/_api/gharial/{}/vertex/{}".format(self._name, collection)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if _batch:
             return {
                 "method": "post",
@@ -292,7 +267,7 @@ class Graph(object):
         return res.body["vertex"]
 
     def update_vertex(self, vertex_id, data, rev=None, keep_none=True,
-                      wait_for_sync=False, _batch=False):
+                      sync=False, _batch=False):
         """Update a vertex of the specified ID in this graph.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -312,15 +287,15 @@ class Graph(object):
         :type rev: str or None
         :param keep_none: whether or not to keep the keys with value None
         :type keep_none: bool
-        :param wait_for_sync: wait for the update to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for the update to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the updated vertex
         :rtype: dict
         :raises: VertexRevisionError, VertexUpdateError
         """
         path = "/_api/gharial/{}/vertex/{}".format(self._name, vertex_id)
         params = {
-            "waitForSync": wait_for_sync,
+            "waitForSync": sync,
             "keepNull": keep_none
         }
         if rev is not None:
@@ -341,7 +316,7 @@ class Graph(object):
             raise VertexUpdateError(res)
         return res.body["vertex"]
 
-    def replace_vertex(self, vertex_id, data, rev=None, wait_for_sync=False,
+    def replace_vertex(self, vertex_id, data, rev=None, sync=False,
                        _batch=False):
         """Replace a vertex of the specified ID in this graph.
 
@@ -357,14 +332,14 @@ class Graph(object):
         :type data: dict
         :param rev: the vertex revision must match this value
         :type rev: str or None
-        :param wait_for_sync: wait for replace to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for replace to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the replaced vertex
         :rtype: dict
         :raises: VertexRevisionError, VertexReplaceError
         """
         path = "/_api/gharial/{}/vertex/{}".format(self._name, vertex_id)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if rev is not None:
             params["rev"] = rev
         if "_rev" in data:
@@ -383,7 +358,7 @@ class Graph(object):
             raise VertexReplaceError(res)
         return res.body["vertex"]
 
-    def delete_vertex(self, vertex_id, rev=None, wait_for_sync=False,
+    def delete_vertex(self, vertex_id, rev=None, sync=False,
                       _batch=False):
         """Delete the vertex of the specified ID from this graph.
 
@@ -394,7 +369,7 @@ class Graph(object):
         :raises: VertexRevisionError, VertexDeleteError
         """
         path = "/_api/gharial/{}/vertex/{}".format(self._name, vertex_id)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if rev is not None:
             params["rev"] = rev
         if _batch:
@@ -439,7 +414,7 @@ class Graph(object):
             raise EdgeGetError(res)
         return res.body["edge"]
 
-    def create_edge(self, collection, data, wait_for_sync=False, _batch=False):
+    def create_edge(self, collection, data, sync=False, _batch=False):
         """Create an edge to the specified edge collection of this graph.
 
         The ``data`` must contain ``_from`` and ``_to`` keys with valid
@@ -450,8 +425,8 @@ class Graph(object):
         :type collection: str
         :param data: the body of the new edge
         :type data: dict
-        :param wait_for_sync: wait for the create to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for the create to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the new edge
         :rtype: dict
         :raises: DocumentInvalidError, EdgeCreateError
@@ -463,7 +438,7 @@ class Graph(object):
             raise DocumentInvalidError(
                 "the new edge data is missing the '_from' key")
         path = "/_api/gharial/{}/edge/{}".format(self._name, collection)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if _batch:
             return {
                 "method": "post",
@@ -477,7 +452,7 @@ class Graph(object):
         return res.body["edge"]
 
     def update_edge(self, edge_id, data, rev=None, keep_none=True,
-                    wait_for_sync=False, _batch=False):
+                    sync=False, _batch=False):
         """Update the edge of the specified ID in this graph.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -500,15 +475,15 @@ class Graph(object):
         :type rev: str or None
         :param keep_none: whether or not to keep the keys with value None
         :type keep_none: bool
-        :param wait_for_sync: wait for the update to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for the update to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the updated edge
         :rtype: dict
         :raises: EdgeRevisionError, EdgeUpdateError
         """
         path = "/_api/gharial/{}/edge/{}".format(self._name, edge_id)
         params = {
-            "waitForSync": wait_for_sync,
+            "waitForSync": sync,
             "keepNull": keep_none
         }
         if rev is not None:
@@ -529,7 +504,7 @@ class Graph(object):
             raise EdgeUpdateError(res)
         return res.body["edge"]
 
-    def replace_edge(self, edge_id, data, rev=None, wait_for_sync=False,
+    def replace_edge(self, edge_id, data, rev=None, sync=False,
                      _batch=False):
         """Replace the edge of the specified ID in this graph.
 
@@ -548,14 +523,14 @@ class Graph(object):
         :type data: dict
         :param rev: the edge revision must match this value
         :type rev: str or None
-        :param wait_for_sync: wait for the replace to sync to disk
-        :type wait_for_sync: bool
+        :param sync: wait for the replace to sync to disk
+        :type sync: bool
         :returns: the id, rev and key of the replaced edge
         :rtype: dict
         :raises: EdgeRevisionError, EdgeReplaceError
         """
         path = "/_api/gharial/{}/edge/{}".format(self._name, edge_id)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if rev is not None:
             params["rev"] = rev
         elif "_rev" in data:
@@ -574,7 +549,7 @@ class Graph(object):
             raise EdgeReplaceError(res)
         return res.body["edge"]
 
-    def delete_edge(self, edge_id, rev=None, wait_for_sync=False,
+    def delete_edge(self, edge_id, rev=None, sync=False,
                     _batch=False):
         """Delete the edge of the specified ID from this graph.
 
@@ -585,7 +560,7 @@ class Graph(object):
         :raises: EdgeRevisionError, EdgeDeleteError
         """
         path = "/_api/gharial/{}/edge/{}".format(self._name, edge_id)
-        params = {"waitForSync": wait_for_sync}
+        params = {"waitForSync": sync}
         if _batch:
             return {
                 "method": "delete",
@@ -604,11 +579,10 @@ class Graph(object):
     # Graph Traversals #
     ####################
 
-    def execute_traversal(self, start_vertex, direction=None, strategy=None,
-                          order=None, item_order=None, uniqueness=None,
-                          max_iterations=None, min_depth=None, max_depth=None,
-                          init=None, filters=None, visitor=None, expander=None,
-                          sort=None):
+    def traverse(self, start_vertex, direction=None, strategy=None, order=None,
+                 item_order=None, uniqueness=None, max_iterations=None,
+                 min_depth=None, max_depth=None, init=None, filters=None,
+                 visitor=None, expander=None, sort=None):
         """Execute a graph traversal and return the visited vertices.
 
         For more details on ``init``, ``filter``, ``visitor``, ``expander``

@@ -1,13 +1,14 @@
-"""Wrapper for making REST API calls to ArangoDB."""
+from __future__ import absolute_import, unicode_literals
 
 import json
 
+from six import string_types
+
 from arango.constants import DEFAULT_DB
 from arango.clients import DefaultHTTPClient
-from arango.utils import is_str
 
 
-class Connection(object):
+class APIConnection(object):
     """Connection used to make API calls to ArangoDB.
 
     :param protocol: the internet transfer protocol (default: 'http')
@@ -22,17 +23,18 @@ class Connection(object):
     :type password: str
     :param database: the ArangoDB database to point the API calls to
     :type database: str
-    :param client: HTTP client for this wrapper to use
+    :param client: the HTTP client
     :type client: arango.clients.base.BaseHTTPClient or None
     """
 
-    def __init__(self, protocol="http", host="localhost", port=8529,
-                 username="root", password="", database=None, client=None):
+    def __init__(self, protocol='http', host='localhost', port=8529,
+                 username='root', password='', database=DEFAULT_DB,
+                 client=None):
         self._protocol = protocol
         self._host = host
         self._port = port
-        self._database = DEFAULT_DB if database is None else database
-        self._url_prefix = "{protocol}://{host}:{port}/_db/{db}".format(
+        self._database = database
+        self._url_prefix = '{protocol}://{host}:{port}/_db/{db}'.format(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
@@ -70,7 +72,7 @@ class Connection(object):
         return self._port
 
     @property
-    def database(self):
+    def db(self):
         """Return the name of the database.
 
         :returns: the name of the database
@@ -132,7 +134,7 @@ class Connection(object):
         """
         return self._client.put(
             url=self._url_prefix + endpoint,
-            data=data if is_str(data) else json.dumps(data),
+            data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
             auth=(self._username, self._password)
@@ -154,7 +156,7 @@ class Connection(object):
         """
         return self._client.post(
             url=self._url_prefix + endpoint,
-            data=data if is_str(data) else json.dumps(data),
+            data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
             auth=(self._username, self._password)
@@ -176,7 +178,7 @@ class Connection(object):
         """
         return self._client.patch(
             url=self._url_prefix + endpoint,
-            data=data if is_str(data) else json.dumps(data),
+            data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
             auth=(self._username, self._password)

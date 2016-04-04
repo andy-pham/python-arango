@@ -5,14 +5,13 @@ with open('./arango/version.py') as fp:
     exec(fp.read(), version)
 
 setup(
-    name="python-arango",
-    description="Python Driver for ArangoDB",
+    name='python-arango',
+    description='Python Driver for ArangoDB',
     version=version['VERSION'],
-    author="Joohwan Oh",
-    author_email="joohwan.oh@outlook.com",
-    url="https://github.com/joowani/python-arango",
-    download_url="https://github.com/Joowani/python-arango/tarball/2.2.0",
+    author='Joohwan Oh',
+    author_email='joohwan.oh@outlook.com',
+    url='https://github.com/joowani/python-arango',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=["requests", "pytest"]
+    install_requires=['requests', 'pytest', 'six']
 )

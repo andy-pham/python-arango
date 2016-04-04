@@ -199,11 +199,27 @@ class CollectionListError(ArangoError):
     """Failed to get the list of collections."""
 
 
-class CollectionGetError(ArangoError):
-    """Failed to get the collection."""
+class CollectionGetCountError(ArangoError):
+    """Failed to get the count of the documents in the collections."""
 
 
-class CollectionChecksumError(ArangoError):
+class CollectionGetPropertiesError(ArangoError):
+    """Failed to get the collection properties."""
+
+
+class CollectionSetPropertiesError(ArangoError):
+    """Failed to set the collection properties."""
+
+
+class CollectionGetStatisticsError(ArangoError):
+    """Failed to get the collection statistics."""
+
+
+class CollectionGetRevisionError(ArangoError):
+    """Failed to get the collection revision."""
+
+
+class CollectionGetChecksumError(ArangoError):
     """Failed to get the collection checksum."""
 
 
@@ -211,7 +227,7 @@ class CollectionCreateError(ArangoError):
     """Failed to create the collection."""
 
 
-class CollectionDeleteError(ArangoError):
+class CollectionDropError(ArangoError):
     """Failed to delete the collection"""
 
 
@@ -235,7 +251,7 @@ class CollectionUnloadError(ArangoError):
     """Failed to unload the collection from memory."""
 
 
-class CollectionRotateJournalError(ArangoError):
+class CollectionRotateError(ArangoError):
     """Failed to rotate the journal of the collection."""
 
 
@@ -269,7 +285,7 @@ class DocumentGetError(ArangoError):
     """Failed to get the document."""
 
 
-class DocumentCreateError(ArangoError):
+class DocumentInsertError(ArangoError):
     """Failed to create the document."""
 
 
@@ -385,7 +401,7 @@ class AQLQueryExecuteError(ArangoError):
     """Failed to execute the AQL query."""
 
 
-class AQLQueryCacheDeleteError(ArangoError):
+class AQLQueryCacheClearError(ArangoError):
     """Failed to clear the AQL query cache."""
 
 
@@ -393,7 +409,7 @@ class AQLQueryCacheGetError(ArangoError):
     """Failed to get the AQL query cache properties."""
 
 
-class AQLQueryCacheSetError(ArangoError):
+class AQLQueryCacheConfigureError(ArangoError):
     """Failed to configure the AQL query cache properties."""
 
 
@@ -483,7 +499,7 @@ class SimpleQueryFullTextError(ArangoError):
     """Failed to execute the ``fulltext`` simple query."""
 
 
-class SimpleQueryLookupByKeysError(ArangoError):
+class DocumentGetManyError(ArangoError):
     """Failed to execute the ``lookup-by-keys`` simple query."""
 
 
@@ -542,7 +558,7 @@ class GraphCreateError(ArangoError):
     """Failed to create the graph."""
 
 
-class GraphDeleteError(ArangoError):
+class GraphDropError(ArangoError):
     """Failed to delete the graph."""
 
 
@@ -567,7 +583,7 @@ class VertexCollectionCreateError(ArangoError):
     """Failed to create the vertex collection."""
 
 
-class VertexCollectionDeleteError(ArangoError):
+class VertexCollectionDropError(ArangoError):
     """Failed to delete the vertex collection."""
 
 
