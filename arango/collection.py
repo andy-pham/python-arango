@@ -54,7 +54,7 @@ class Collection(object):
         :returns: the requested document
         :rtype: dict
         """
-        return self.get_one(key)
+        return self.get(key)
 
     def __contains__(self, key):
         """Return True if the document exists in this collection.
@@ -295,7 +295,7 @@ class Collection(object):
     # Document Management #
     #######################
 
-    def get_one(self, key, revision=None, match=True):
+    def get(self, key, revision=None, match=True):
         """Return the document of the given key.
 
         If the document revision ``rev`` is specified, it is compared
@@ -342,7 +342,7 @@ class Collection(object):
             raise DocumentGetManyError(res)
         return res.body['documents']
 
-    def insert_one(self, document, sync=False):
+    def insert(self, document, sync=False):
         """Insert a new document to this collection.
 
         If ``data`` contains the ``_key`` key, the value must be unique.
@@ -411,8 +411,8 @@ class Collection(object):
         del res.body['error']
         return res.body
 
-    def update_one(self, key, data, revision=None, merge=True, keep_none=True,
-                   sync=False):
+    def update(self, key, data, revision=None, merge=True, keep_none=True,
+               sync=False):
         """Update the specified document in this collection.
 
         If ``keep_none`` is set to True, then attributes with values None
@@ -465,7 +465,7 @@ class Collection(object):
         del res.body['error']
         return res.body
 
-    def replace_one(self, key, data, revision=None, sync=False):
+    def replace(self, key, data, revision=None, sync=False):
         """Replace the specified document in this collection.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -508,7 +508,7 @@ class Collection(object):
         del res.body['error']
         return res.body
 
-    def delete_one(self, key, rev=None, sync=False):
+    def delete(self, key, rev=None, sync=False):
         """Delete the specified document from this collection.
 
         :param key: the key of the document to be deleted
@@ -1022,7 +1022,20 @@ class Collection(object):
 
         indexes = {}
         for index_id, details in res.body['identifiers'].items():
-            del details['id']
+            if 'id' in details:
+                del details['id']
+            if 'minLength' in details:
+                details['min_length'] = details.pop('minLength')
+            if 'byteSize' in details:
+                details['byte_size'] = details.pop('byteSize')
+            if 'geoJson' in details:
+                details['geo_json'] = details.pop('geoJson')
+            if 'ignoreNull' in details:
+                details['ignore_none'] = details.pop('ignoreNull')
+            if 'selectivityEstimate' in details:
+                details['selectivity_estimate'] = details.pop(
+                    'selectivityEstimate'
+                )
             indexes[index_id.split('/', 1)[1]] = details
         return indexes
 
