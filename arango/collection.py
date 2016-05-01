@@ -295,53 +295,6 @@ class Collection(object):
     # Document Management #
     #######################
 
-    def get(self, key, revision=None, match=True):
-        """Return the document of the given key.
-
-        If the document revision ``rev`` is specified, it is compared
-        against the revision of the retrieved document. If ``match`` is set
-        to True and the revisions do NOT match, or if ``match`` is set to
-        False and the revisions DO match, ``DocumentRevisionError`` is thrown.
-
-        :param key: the key of the document to retrieve
-        :type key: str
-        :param revision: the document revision is compared against this value
-        :type revision: str or None
-        :param match: whether or not the revision should match
-        :type match: bool
-        :returns: the requested document or None if not found
-        :rtype: dict or None
-        :raises: DocumentRevisionError, DocumentGetError
-        """
-        res = self._conn.get(
-            '/_api/document/{}/{}'.format(self._name, key),
-            headers={
-                'If-Match' if match else 'If-None-Match': revision
-            } if revision else {}
-        )
-        if res.status_code in {412, 304}:
-            raise DocumentRevisionError(res)
-        elif res.status_code == 404:
-            return None
-        elif res.status_code not in HTTP_OK:
-            raise DocumentGetError(res)
-        return res.body
-
-    def get_many(self, keys):
-        """Return all documents whose key is in ``keys``.
-
-        :param keys: keys of the documents to return
-        :type keys: list
-        :returns: the list of documents
-        :rtype: list
-        :raises: DocumentGetManyError
-        """
-        data = {'collection': self._name, 'keys': keys}
-        res = self._conn.put('/_api/simple/lookup-by-keys', data=data)
-        if res.status_code not in HTTP_OK:
-            raise DocumentGetManyError(res)
-        return res.body['documents']
-
     def insert(self, document, sync=False):
         """Insert a new document to this collection.
 
@@ -407,9 +360,56 @@ class Collection(object):
             }
         )
         if res.status_code not in HTTP_OK:
-            raise DocumentsImportError(res)
+            raise DocumentInsertError(res)
         del res.body['error']
         return res.body
+
+    def get(self, key, revision=None, match=True):
+        """Return the document of the given key.
+
+        If the document revision ``rev`` is specified, it is compared
+        against the revision of the retrieved document. If ``match`` is set
+        to True and the revisions do NOT match, or if ``match`` is set to
+        False and the revisions DO match, ``DocumentRevisionError`` is thrown.
+
+        :param key: the key of the document to retrieve
+        :type key: str
+        :param revision: the document revision is compared against this value
+        :type revision: str or None
+        :param match: whether or not the revision should match
+        :type match: bool
+        :returns: the requested document or None if not found
+        :rtype: dict or None
+        :raises: DocumentRevisionError, DocumentGetError
+        """
+        res = self._conn.get(
+            '/_api/document/{}/{}'.format(self._name, key),
+            headers={
+                'If-Match' if match else 'If-None-Match': revision
+            } if revision else {}
+        )
+        if res.status_code in {412, 304}:
+            raise DocumentRevisionError(res)
+        elif res.status_code == 404:
+            return None
+        elif res.status_code not in HTTP_OK:
+            raise DocumentGetError(res)
+        return res.body
+
+    def get_many(self, keys):
+        """Return all documents whose key is in ``keys``.
+
+        :param keys: keys of the documents to return
+        :type keys: list
+        :returns: the list of documents
+        :rtype: list
+        :raises: DocumentGetManyError
+        """
+        data = {'collection': self._name, 'keys': keys}
+        res = self._conn.put('/_api/simple/lookup-by-keys', data=data)
+        if res.status_code not in HTTP_OK:
+            raise DocumentGetError(res)
+        return res.body['documents']
 
     def update(self, key, data, revision=None, merge=True, keep_none=True,
                sync=False):
@@ -445,7 +445,8 @@ class Collection(object):
         """
         params = {
             'waitForSync': sync,
-            'keepNull': keep_none
+            'keepNull': keep_none,
+            'mergeObjects': merge
         }
         if revision is not None:
             params['rev'] = revision
@@ -508,13 +509,13 @@ class Collection(object):
         del res.body['error']
         return res.body
 
-    def delete(self, key, rev=None, sync=False):
+    def delete(self, key, revision=None, sync=False):
         """Delete the specified document from this collection.
 
         :param key: the key of the document to be deleted
         :type key: str
-        :param rev: the document revision must match this value
-        :type rev: str or None
+        :param revision: the document revision must match this value
+        :type revision: str or None
         :param sync: wait for the delete to sync to disk
         :type sync: bool
         :returns: the id, rev and key of the deleted document
@@ -522,8 +523,8 @@ class Collection(object):
         :raises: DocumentRevisionError, DocumentDeleteError
         """
         params = {'waitForSync': sync}
-        if rev is not None:
-            params['rev'] = rev
+        if revision is not None:
+            params['rev'] = revision
             params['policy'] = 'error'
         res = self._conn.delete(
             endpoint='/_api/document/{}/{}'.format(self._name, key),
@@ -535,8 +536,8 @@ class Collection(object):
             raise DocumentDeleteError(res)
         return {
             'id': res.body['_id'],
-            'revision': res.body['_rev'],
-            'key': res.body['_key']
+            'key': res.body['_key'],
+            'revision': res.body['_rev']
         }
 
     def delete_many(self, keys):
@@ -548,13 +549,10 @@ class Collection(object):
         :rtype: dict
         :raises: SimpleQueryDeleteByKeysError
         """
-        data = {
-            'collection': self._name,
-            'keys': keys,
-        }
+        data = {'collection': self._name, 'keys': keys}
         res = self._conn.put('/_api/simple/remove-by-keys', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryDeleteByKeysError(res)
+            raise DocumentDeleteError(res)
         return {
             'removed': res.body['removed'],
             'ignored': res.body['ignored'],
@@ -695,7 +693,7 @@ class Collection(object):
             raise SimpleQueryAnyError(res)
         return res.body['document']
 
-    def find_one(self, example):
+    def find(self, example):
         """Return the first document matching the given example document body.
 
         :param example: the example document body

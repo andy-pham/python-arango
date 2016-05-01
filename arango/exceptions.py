@@ -260,10 +260,6 @@ class CollectionRotateError(ArangoError):
 ########################################
 
 
-class DocumentsImportError(ArangoError):
-    """Failed to bulk import documents/edges."""
-
-
 class DocumentsExportError(ArangoError):
     """Failed to bulk export documents/edges."""
 
@@ -497,14 +493,6 @@ class SimpleQueryWithinError(ArangoError):
 
 class SimpleQueryFullTextError(ArangoError):
     """Failed to execute the ``fulltext`` simple query."""
-
-
-class DocumentGetManyError(ArangoError):
-    """Failed to execute the ``lookup-by-keys`` simple query."""
-
-
-class SimpleQueryDeleteByKeysError(ArangoError):
-    """Failed to execute the ``Delete-by-keys`` simple query."""
 
 
 class SimpleQueryError(ArangoError):

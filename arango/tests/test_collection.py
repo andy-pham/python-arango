@@ -26,6 +26,10 @@ def teardown_module(*_):
     driver.drop_database(db_name, ignore_missing=True)
 
 
+def setup_function(*_):
+    collection.truncate()
+
+
 def test_properties():
     assert collection.name == col_name
     assert collection.database == db_name
@@ -34,20 +38,20 @@ def test_properties():
 
 def test_rename():
     assert collection.name == col_name
-    new_col_name = generate_col_name(driver)
+    new_name = generate_col_name(driver)
 
-    result = collection.rename(new_col_name)
+    result = collection.rename(new_name)
     assert result is True
-    assert collection.name == new_col_name
+    assert collection.name == new_name
     assert collection.database == db_name
-    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_col_name)
+    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
 
     # Try again (the operation should be idempotent)
-    result = collection.rename(new_col_name)
+    result = collection.rename(new_name)
     assert result is True
-    assert collection.name == new_col_name
+    assert collection.name == new_name
     assert collection.database == db_name
-    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_col_name)
+    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
 
 
 def test_statistics():
@@ -139,62 +143,223 @@ def test_truncate():
 
 
 def test_insert():
-    collection.truncate()
-    assert len(collection) == 0
-    collection.insert({'_key': '1', 'value': 100})
-    collection.insert({'_key': '2', 'value': 200})
-    collection.insert({'_key': '3', 'value': 300})
-    collection.insert({'_key': '4', 'value': 400})
-    collection.insert({'_key': '5', 'value': 500})
+    for i in range(1, 6):
+        doc = collection.insert({'_key': str(i), 'foo': i * 100})
+        assert doc['_id'] == '{}/{}'.format(collection.name, str(i))
+        assert doc['_key'] == str(i)
+
     assert len(collection) == 5
     for key in range(1, 6):
         assert key in collection
         document = collection.get(key)
         assert document['_key'] == str(key)
-        assert document['value'] == key * 100
+        assert document['foo'] == key * 100
+
+    assert '6' not in collection
+    collection.insert({'_key': '6', 'foo': 200}, sync=True)
+    assert '6' in collection
+    assert collection.get('6')['foo'] == 200
+
+    with pytest.raises(DocumentInsertError):
+        collection.insert({'_key': '1', 'foo': 300})
+    assert collection['1']['foo'] == 100
 
 
 def test_insert_many():
-    collection.truncate()
-    assert len(collection) == 0
-    collection.insert_many([
-        {'_key': '1', 'value': 100},
-        {'_key': '2', 'value': 200},
-        {'_key': '3', 'value': 300},
-        {'_key': '4', 'value': 400},
-        {'_key': '5', 'value': 500},
+    result = collection.insert_many([
+        {'_key': '1', 'foo': 100},
+        {'_key': '2', 'foo': 200},
+        {'_key': '3', 'foo': 300},
+        {'_key': '4', 'foo': 400},
+        {'_key': '5', 'foo': 500},
     ])
+    assert result['created'] == 5
+    assert result['errors'] == 0
     assert len(collection) == 5
     for key in range(1, 6):
         assert key in collection
         document = collection.get(key)
         assert document['_key'] == str(key)
-        assert document['value'] == key * 100
+        assert document['foo'] == key * 100
+
+    with pytest.raises(DocumentInsertError):
+        collection.insert_many([
+            {'_key': '1', 'foo': 100},
+            {'_key': '1', 'foo': 200},
+            {'_key': '1', 'foo': 300},
+        ])
 
 
 def test_get():
-    collection.truncate()
-    assert collection.get(1) is None
+    collection.insert({'_key': '1', 'foo': 100})
+    doc = collection.get('1')
+    assert doc['foo'] == 100
 
-    collection.insert({'_key': '1', 'value': 100})
-    document = collection.get('1')
-    assert document is not None
-    assert document['_key'] == '1'
-    assert document['value'] == 100
+    old_rev = doc['_rev']
+    new_rev = str(int(old_rev) + 1)
+
+    assert collection.get('2') is None
+    assert collection.get('1', revision=old_rev) == doc
+
+    with pytest.raises(DocumentRevisionError):
+        collection.get('1', revision=new_rev)
 
 
 def test_get_many():
-    collection.truncate()
     assert collection.get_many(['1', '2', '3', '4', '5']) == []
     expected = [
-        {'_key': '1', 'value': 100},
-        {'_key': '2', 'value': 200},
-        {'_key': '3', 'value': 300},
-        {'_key': '4', 'value': 400},
-        {'_key': '5', 'value': 500},
+        {'_key': '1', 'foo': 100},
+        {'_key': '2', 'foo': 200},
+        {'_key': '3', 'foo': 300},
+        {'_key': '4', 'foo': 400},
+        {'_key': '5', 'foo': 500},
     ]
     collection.insert_many(expected)
-    assert collection.get_many(['1', '2', '3', '4', '5']) == expected
+    assert collection.get_many([]) == []
+    assert expected == [
+        {'_key': doc['_key'], 'foo': doc['foo']}
+        for doc in collection.get_many(['1', '2', '3', '4', '5'])
+    ]
+    assert expected == [
+        {'_key': doc['_key'], 'foo': doc['foo']}
+        for doc in collection.get_many(['1', '2', '3', '4', '5', '6'])
+    ]
+
+
+def test_update():
+    collection.insert({'_key': '1', 'foo': 100})
+    assert collection['1']['foo'] == 100
+
+    doc = collection.update('1', {'foo': 200})
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == 200
+
+    doc = collection.update('1', {'foo': None}, keep_none=True)
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] is None
+    
+    doc = collection.update('1', {'foo': {'bar': 1}}, sync=True)
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == {'bar': 1}
+
+    doc = collection.update('1', {'foo': {'baz': 2}}, merge=True)
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == {'bar': 1, 'baz': 2}
+
+    doc = collection.update('1', {'foo': None}, keep_none=False)
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert 'foo' not in collection['1']
+
+    old_rev = doc['_rev']
+    new_rev = str(int(old_rev) + 1)
+
+    with pytest.raises(DocumentRevisionError):
+        collection.update('1', {'foo': 300, '_rev': new_rev})
+    assert 'foo' not in collection['1']
+
+    with pytest.raises(DocumentUpdateError):
+        collection.update('2', {'foo': 300})
+    assert 'foo' not in collection['1']
+
+
+def test_replace():
+    doc = collection.insert({'_key': '1', 'foo': 100})
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == 100
+
+    doc = collection.replace('1', {'foo': 200})
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == 200
+
+    doc = collection.replace('1', {'foo': 300}, sync=True)
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == 300
+
+    doc = collection.replace('1', {'foo': 400}, revision=doc['_rev'])
+    assert doc['_id'] == '{}/1'.format(collection.name)
+    assert doc['_key'] == '1'
+    assert collection['1']['foo'] == 400
+
+    old_rev = doc['_rev']
+    new_rev = str(int(old_rev) + 1)
+
+    with pytest.raises(DocumentRevisionError):
+        collection.replace('1', {'foo': 500, '_rev': new_rev})
+    assert collection['1']['foo'] == 400
+
+    with pytest.raises(DocumentReplaceError):
+        collection.replace('2', {'foo': 600})
+    assert collection['1']['foo'] == 400
+
+
+def test_delete():
+    collection.insert_many([
+        {'_key': '1', 'foo': 100},
+        {'_key': '2', 'foo': 200},
+        {'_key': '3', 'foo': 300},
+    ])
+
+    doc = collection.delete('1')
+    assert doc['id'] == '{}/1'.format(collection.name)
+    assert doc['key'] == '1'
+    assert '1' not in collection
+    assert len(collection) == 2
+
+    doc = collection.delete('2', sync=True)
+    assert doc['id'] == '{}/2'.format(collection.name)
+    assert doc['key'] == '2'
+    assert '2' not in collection
+    assert len(collection) == 1
+
+    old_rev = collection['3']['_rev']
+    new_rev = str(int(old_rev) + 1)
+
+    with pytest.raises(DocumentRevisionError):
+        collection.delete('3', revision=new_rev)
+    assert '3' in collection
+    assert len(collection) == 1
+
+    with pytest.raises(DocumentDeleteError):
+        collection.delete('4')
+    assert len(collection) == 1
+
+
+def test_delete_many():
+    collection.insert_many([
+        {'_key': '1', 'foo': 100},
+        {'_key': '2', 'foo': 200},
+        {'_key': '3', 'foo': 300},
+    ])
+    result = collection.delete_many([])
+    assert result['removed'] == 0
+    assert result['ignored'] == 0
+    for key in ['1', '2', '3']:
+        assert key in collection
+
+    result = collection.delete_many(['1'])
+    assert result['removed'] == 1
+    assert result['ignored'] == 0
+    assert '1' not in collection
+    assert len(collection) == 2
+
+    result = collection.delete_many(['4'])
+    assert result['removed'] == 0
+    assert result['ignored'] == 1
+    assert '2' in collection and '3' in collection
+    assert len(collection) == 2
+
+    result = collection.delete_many(['1', '2', '3'])
+    assert result['removed'] == 2
+    assert result['ignored'] == 1
+    assert len(collection) == 0
 
 
 def test_list_indexes():
