@@ -443,55 +443,59 @@ class AQLFunctionDeleteError(ArangoError):
 ###########################
 
 
-class SimpleQueryGetByExampleError(ArangoError):
+class DocumentFindManyError(ArangoError):
     """Failed to execute the ``by-example`` simple query."""
 
 
-class SimpleQueryFirstExampleError(ArangoError):
+class DocumentFindOneError(ArangoError):
     """Failed to execute the ``first-example`` simple query."""
 
 
-class SimpleQueryReplaceByExampleError(ArangoError):
+class DocumentFindAndReplaceError(ArangoError):
     """Failed to execute the ``replace-by-example`` simple query."""
 
 
-class SimpleQueryUpdateByExampleError(ArangoError):
+class DocumentFindAndUpdateError(ArangoError):
     """Failed to execute the ``update-by-example`` simple query."""
 
 
-class SimpleQueryDeleteByExampleError(ArangoError):
+class DocumentFindAndDeleteError(ArangoError):
     """Failed to execute the ``Delete-by-example`` simple query."""
 
 
-class SimpleQueryFirstError(ArangoError):
+class DocumentGetFirstError(ArangoError):
     """Failed to execute the ``first`` simple query."""
 
 
-class SimpleQueryLastError(ArangoError):
+class DocumentGetLastError(ArangoError):
     """Failed to execute the ``last`` simple query."""
 
 
-class SimpleQueryAllError(ArangoError):
+class DocumentGetAllError(ArangoError):
     """Failed to execute the `all`` simple query."""
 
 
-class SimpleQueryAnyError(ArangoError):
+class DocumentGetRandomError(ArangoError):
     """Failed to execute the ``any`` simple query."""
 
 
-class SimpleQueryRangeError(ArangoError):
+class DocumentFindBetweenError(ArangoError):
     """Failed to execute the ``range`` simple query."""
 
 
-class SimpleQueryNearError(ArangoError):
+class DocumentFindNearError(ArangoError):
     """Failed to execute the ``near`` simple query."""
 
 
-class SimpleQueryWithinError(ArangoError):
+class DocumentFindInRadiusError(ArangoError):
     """Failed to execute the ``within`` simple query."""
 
 
-class SimpleQueryFullTextError(ArangoError):
+class DocumentFindInRectangleError(ArangoError):
+    """Failed to execute the ``within-rectangle`` simple query."""
+
+
+class DocumentFindTextError(ArangoError):
     """Failed to execute the ``fulltext`` simple query."""
 
 

@@ -332,6 +332,8 @@ class Collection(object):
     def insert_many(self, documents, complete=True, details=True):
         """Import documents into this collection in bulk.
 
+        The insert does not retain the order of the documents.
+
         If ``complete`` is set to a value other than True, valid documents
         will be imported while invalid ones are rejected, meaning only some of
         the uploaded documents might have been imported.
@@ -415,7 +417,7 @@ class Collection(object):
                sync=False):
         """Update the specified document in this collection.
 
-        If ``keep_none`` is set to True, then attributes with values None
+        If ``keep_none`` is set to True, then attributes with value None
         are retained. Otherwise, they are deleted from the document.
 
         If ``data`` contains the ``_key`` key, it is ignored.
@@ -509,7 +511,7 @@ class Collection(object):
         del res.body['error']
         return res.body
 
-    def delete(self, key, revision=None, sync=False):
+    def delete(self, key, revision=None, sync=False, ignore_missing=True):
         """Delete the specified document from this collection.
 
         :param key: the key of the document to be deleted
@@ -518,6 +520,8 @@ class Collection(object):
         :type revision: str or None
         :param sync: wait for the delete to sync to disk
         :type sync: bool
+        :param ignore_missing: ignore missing documents
+        :type ignore_missing: bool
         :returns: the id, rev and key of the deleted document
         :rtype: dict
         :raises: DocumentRevisionError, DocumentDeleteError
@@ -532,6 +536,11 @@ class Collection(object):
         )
         if res.status_code == 412:
             raise DocumentRevisionError(res)
+        elif res.status_code == 404:
+            if ignore_missing:
+                return False
+            else:
+                raise DocumentDeleteError(res)
         elif res.status_code not in HTTP_OK:
             raise DocumentDeleteError(res)
         return {
@@ -612,14 +621,14 @@ class Collection(object):
     # Simple Queries #
     ##################
 
-    def first(self, count=1):
+    def first(self, count=0):
         """Return the first ``count`` number of documents in this collection.
 
         :param count: the number of documents to return
         :type count: int
-        :returns: the list of documents
-        :rtype: list
-        :raises: SimpleQueryFirstError
+        :returns: the list of documents or first document if ``count`` is 0
+        :rtype: list | dict
+        :raises: DocumentGetFirstError
         """
         res = self._conn.put(
             endpoint='/_api/simple/first',
@@ -629,17 +638,17 @@ class Collection(object):
             }
         )
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryFirstError(res)
+            raise DocumentGetFirstError(res)
         return res.body['result']
 
-    def last(self, count=1):
+    def last(self, count=0):
         """Return the last ``count`` number of documents in this collection.
 
         :param count: the number of documents to return
         :type count: int
         :returns: the list of documents
         :rtype: list
-        :raises: SimpleQueryLastError
+        :raises: DocumentGetLastError
         """
         res = self._conn.put(
             endpoint='/_api/simple/last',
@@ -649,7 +658,7 @@ class Collection(object):
             }
         )
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryLastError(res)
+            raise DocumentGetLastError(res)
         return res.body['result']
 
     def all(self, skip=None, limit=None):
@@ -663,7 +672,7 @@ class Collection(object):
         :type limit: int
         :returns: the list of all documents
         :rtype: list
-        :raises: SimpleQueryAllError
+        :raises: DocumentGetAllError
         """
         data = {'collection': self._name}
         if skip is not None:
@@ -675,7 +684,7 @@ class Collection(object):
             data=data
         )
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryAllError(res)
+            raise DocumentGetAllError(res)
         return cursor(self._conn, res)
 
     def random(self):
@@ -683,31 +692,31 @@ class Collection(object):
 
         :returns: the random document
         :rtype: dict
-        :raises: SimpleQueryAnyError
+        :raises: DocumentGetRandomError
         """
         res = self._conn.put(
             '/_api/simple/any',
             data={'collection': self._name}
         )
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryAnyError(res)
+            raise DocumentGetRandomError(res)
         return res.body['document']
 
-    def find(self, example):
+    def find_one(self, example):
         """Return the first document matching the given example document body.
 
         :param example: the example document body
         :type example: dict
         :returns: the first matching document
         :rtype: dict or None
-        :raises: SimpleQueryFirstExampleError
+        :raises: DocumentFindOneError
         """
         data = {'collection': self._name, 'example': example}
         res = self._conn.put('/_api/simple/first-example', data=data)
         if res.status_code == 404:
             return None
         elif res.status_code not in HTTP_OK:
-            raise SimpleQueryFirstExampleError(res)
+            raise DocumentFindOneError(res)
         return res.body['document']
 
     def find_many(self, example, skip=None, limit=None):
@@ -723,7 +732,7 @@ class Collection(object):
         :type limit: int
         :returns: the list of matching documents
         :rtype: list
-        :raises: SimpleQueryGetByExampleError
+        :raises: DocumentFindManyError
         """
         data = {'collection': self._name, 'example': example}
         if skip is not None:
@@ -732,17 +741,17 @@ class Collection(object):
             data['limit'] = limit
         res = self._conn.put('/_api/simple/by-example', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryGetByExampleError(res)
+            raise DocumentFindManyError(res)
         return cursor(self._conn, res)
 
-    def find_and_update(self, example, new_value, keep_none=True, limit=None,
+    def find_and_update(self, example, data, keep_none=True, limit=None,
                         sync=False):
         """Update all documents matching the given example document body.
 
         :param example: the example document body
         :type example: dict
-        :param new_value: the new document body to update with
-        :type new_value: dict
+        :param data: the new document body to update with
+        :type data: dict
         :param keep_none: whether or not to keep the None values
         :type keep_none: bool
         :param limit: maximum number of documents to return
@@ -751,12 +760,12 @@ class Collection(object):
         :type sync: bool
         :returns: the number of documents updated
         :rtype: int
-        :raises: SimpleQueryUpdateByExampleError
+        :raises: DocumentFindAndUpdateError
         """
         data = {
             'collection': self._name,
             'example': example,
-            'newValue': new_value,
+            'newValue': data,
             'keepNull': keep_none,
             'waitForSync': sync,
         }
@@ -764,7 +773,7 @@ class Collection(object):
             data['limit'] = limit
         res = self._conn.put('/_api/simple/update-by-example', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryUpdateByExampleError(res)
+            raise DocumentFindAndUpdateError(res)
         return res.body['updated']
 
     def find_and_replace(self, example, new_value, limit=None, sync=False):
@@ -782,7 +791,7 @@ class Collection(object):
         :type sync: bool
         :returns: the number of documents replaced
         :rtype: int
-        :raises: SimpleQueryReplaceByExampleError
+        :raises: DocumentFindAndReplaceError
         """
         data = {
             'collection': self._name,
@@ -794,7 +803,7 @@ class Collection(object):
             data['limit'] = limit
         res = self._conn.put('/_api/simple/replace-by-example', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryReplaceByExampleError(res)
+            raise DocumentFindAndReplaceError(res)
         return res.body['replaced']
 
     def find_and_delete(self, example, limit=None, sync=False):
@@ -808,7 +817,7 @@ class Collection(object):
         :type sync: bool
         :returns: the number of documents deleted
         :rtype: int
-        :raises: SimpleQueryDeleteByExampleError
+        :raises: DocumentFindAndDeleteError
         """
         data = {
             'collection': self._name,
@@ -819,18 +828,18 @@ class Collection(object):
             data['limit'] = limit
         res = self._conn.put('/_api/simple/remove-by-example', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryDeleteByExampleError(res)
+            raise DocumentFindAndDeleteError(res)
         return res.body['deleted']
 
-    def range(self, attribute, left, right, closed=True, skip=None,
-              limit=None):
+    def find_in_between(self, field, left, right, closed=True, skip=None,
+                        limit=None):
         """Return all the documents within a given range.
 
         In order to execute this query a skiplist index must be present on the
         queried attribute.
 
-        :param attribute: the attribute path with a skip-list index
-        :type attribute: str
+        :param field: the attribute path with a skip-list index
+        :type field: str
         :param left: the lower bound
         :type left: int
         :param right: the upper bound
@@ -843,11 +852,11 @@ class Collection(object):
         :type limit: int
         :returns: the list of documents
         :rtype: list
-        :raises: SimpleQueryRangeError
+        :raises: DocumentFindBetweenError
         """
         data = {
             'collection': self._name,
-            'attribute': attribute,
+            'attribute': field,
             'left': left,
             'right': right,
             'closed': closed
@@ -858,11 +867,11 @@ class Collection(object):
             data['limit'] = limit
         res = self._conn.put('/_api/simple/range', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryRangeError(res)
+            raise DocumentFindBetweenError(res)
         return cursor(self._conn, res)
 
-    def near(self, latitude, longitude, distance=None, radius=None,
-             skip=None, limit=None, geo=None):
+    def find_near(self, latitude, longitude, distance=None, radius=None,
+                  skip=None, limit=None, geo=None):
         """Return all the documents near the given coordinate.
 
         By default number of documents returned is 100. The returned list is
@@ -882,6 +891,8 @@ class Collection(object):
         :type longitude: int
         :param distance: return the distance to the coordinate in this key
         :type distance: str
+        :param radius: the maximum radius (in meters)
+        :type radius: str
         :param skip: the number of documents to skip
         :type skip: int
         :param limit: maximum number of documents to return
@@ -890,7 +901,7 @@ class Collection(object):
         :type geo: str
         :returns: the list of documents that are near the coordinate
         :rtype: list
-        :raises: SimpleQueryNearError
+        :raises: DocumentFindNearError
         """
         data = {
             'collection': self._name,
@@ -910,13 +921,13 @@ class Collection(object):
 
         res = self._conn.put('/_api/simple/near', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryNearError(res)
+            raise DocumentFindNearError(res)
         return cursor(self._conn, res)
 
     # TODO this endpoint does not seem to work
-    def within(self, latitude, longitude, radius, distance=None, skip=None,
-               limit=None, geo=None):
-        """Return all documents within the radius around the coordinate.
+    def find_in_radius(self, latitude, longitude, radius, distance=None,
+                       skip=None, limit=None, geo=None):
+        """Return all documents in a radius around the given coordinates.
 
         The returned list is sorted by distance from the coordinate. In order
         to execute this query a geo index must be defined for the collection.
@@ -942,7 +953,7 @@ class Collection(object):
         :type geo: str
         :returns: the list of documents are within the radius
         :rtype: list
-        :raises: SimpleQueryWithinError
+        :raises: DocumentFindInRadiusError
         """
         data = {
             'collection': self._name,
@@ -961,10 +972,55 @@ class Collection(object):
 
         res = self._conn.put('/_api/simple/within', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryWithinError(res)
+            raise DocumentFindInRadiusError(res)
         return cursor(self._conn, res)
 
-    def find_text(self, attribute, query, skip=None, limit=None, index=None):
+    def find_in_rectangle(self, latitude1, latitude2, longitude1, longitude2,
+                          skip=None, limit=None, geo=None):
+        """Return all documents in a rectangle around the given coordinates.
+
+        In order to execute this query a geo index must be defined for the
+        collection. If there are more than one geo-spatial index, the ``geo``
+        argument can be used to select a particular index.
+
+        :param latitude1: the latitude of the first rectangle coordinate
+        :type latitude1: int
+        :param longitude1: the longitude of the first rectangle coordinate
+        :type longitude1: int
+        :param latitude2: the latitude of the second rectangle coordinate
+        :type latitude2: int
+        :param longitude2: the longitude of the second rectangle coordinate
+        :type longitude2: int
+        :param skip: the number of documents to skip
+        :type skip: int
+        :param limit: maximum number of documents to return
+        :type limit: int
+        :param geo: the identifier of the geo-index to use
+        :type geo: str
+        :returns: the list of documents are within the radius
+        :rtype: list
+        :raises: DocumentFindInRectangleError
+        """
+        data = {
+            'collection': self._name,
+            'latitude1': latitude1,
+            'longitude1': longitude1,
+            'latitude2': latitude2,
+            'longitude2': longitude2,
+        }
+        if skip is not None:
+            data['skip'] = skip
+        if limit is not None:
+            data['limit'] = limit
+        if geo is not None:
+            data['geo'] = geo
+
+        res = self._conn.put('/_api/simple/within-rectangle', data=data)
+        if res.status_code not in HTTP_OK:
+            raise DocumentFindInRectangleError(res)
+        return cursor(self._conn, res)
+
+    def find_text(self, field, query, skip=None, limit=None, index=None):
         """Return all documents that match the specified fulltext ``query``.
 
         In order to execute this query a fulltext index must be defined for the
@@ -973,8 +1029,8 @@ class Collection(object):
         For more information on fulltext queries please refer to:
         https://docs.arangodb.com/SimpleQueries/FulltextQueries.html
 
-        :param attribute: the attribute path with a fulltext index
-        :type attribute: str
+        :param field: the attribute path with a fulltext index
+        :type field: str
         :param query: the fulltext query
         :type query: str
         :param skip: the number of documents to skip
@@ -983,11 +1039,11 @@ class Collection(object):
         :type limit: int
         :returns: the list of documents
         :rtype: list
-        :raises: SimpleQueryFullTextError
+        :raises: DocumentFindTextError
         """
         data = {
             'collection': self._name,
-            'attribute': attribute,
+            'attribute': field,
             'query': query,
         }
         if skip is not None:
@@ -998,7 +1054,7 @@ class Collection(object):
             data['index'] = index
         res = self._conn.put('/_api/simple/fulltext', data=data)
         if res.status_code not in HTTP_OK:
-            raise SimpleQueryFullTextError(res)
+            raise DocumentFindTextError(res)
         return cursor(self._conn, res)
 
     ####################

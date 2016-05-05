@@ -1,4 +1,4 @@
-# Name of the default ArangoDB database
+# Name of the default database
 DEFAULT_DB = '_system'
 
 # Valid collection types
@@ -28,7 +28,7 @@ HTTP_OK = {
     206, '206',
 }
 
-# ArangoDB specific logging levels
+# Logging levels
 LOG_LEVELS = {
     'fatal': 0,
     'error': 1,
@@ -37,5 +37,5 @@ LOG_LEVELS = {
     'debug': 4,
 }
 
-# ArangoDB specific log sorting types
+# Log sorting types
 LOG_SORTING_TYPES = {'asc', 'desc'}

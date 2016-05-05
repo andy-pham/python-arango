@@ -407,7 +407,7 @@ class Database(object):
     # AQL Functions #
     #################
 
-    def get_functions(self):
+    def list_functions(self):
         """List the AQL functions defined in this database.
 
         :returns: a mapping of AQL function names to its javascript code

@@ -92,7 +92,7 @@ class SimpleQueriesTest(unittest.TestCase):
 
     def test_get_first_example(self):
         self.assertEqual(
-            self.col.find({"value": 1}), None
+            self.col.find_one({"value": 1}), None
         )
         self.col.insert_many([
             {"name": "test_doc_01", "value": 1},
@@ -100,7 +100,7 @@ class SimpleQueriesTest(unittest.TestCase):
             {"name": "test_doc_03", "value": 3}
         ])
         self.assertIn(
-            strip_system_keys(self.col.find({"value": 1})),
+            strip_system_keys(self.col.find_one({"value": 1})),
             [
                 {"name": "test_doc_01", "value": 1},
                 {"name": "test_doc_02", "value": 1}
@@ -170,8 +170,8 @@ class SimpleQueriesTest(unittest.TestCase):
         ])
         self.assertEqual(
             strip_system_keys(
-                self.col.range(
-                    attribute="value",
+                self.col.find_in_between(
+                    field="value",
                     left=2,
                     right=5,
                     closed=True,
@@ -194,7 +194,7 @@ class SimpleQueriesTest(unittest.TestCase):
         ])
         self.assertEqual(
             strip_system_keys(
-                self.col.near(
+                self.col.find_near(
                     latitude=1,
                     longitude=1,
                     limit=1,

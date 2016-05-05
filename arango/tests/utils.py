@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 
+from collections import Mapping, Iterable
 
 def generate_db_name(driver):
     """Generate and return the next available database name.
@@ -74,3 +75,26 @@ def generate_user_name(driver):
     while "test_user_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_user_{num:03d}".format(num=num)
+
+
+def clean_keys(obj):
+    """Return the document(s) with all the system keys stripped.
+
+    :param obj: document(s)
+    :type obj: list or dict
+    :returns: the document(s) with the system keys stripped
+    :rtype: list or dict
+    """
+    if isinstance(obj, Mapping):
+        return {
+            k: v for k, v in obj.items()
+            if not (k != '_key' and k.startswith("_"))
+        }
+    elif isinstance(obj, Iterable):
+        return [
+            {
+                k: v for k, v in document.items()
+                if not (k != '_key' and k.startswith("_"))
+            }
+            for document in obj
+        ]

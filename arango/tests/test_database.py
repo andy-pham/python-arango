@@ -210,18 +210,18 @@ def test_execute_query():
 
 def test_aql_function_management():
     # Test list AQL functions
-    assert db.get_functions() == {}
+    assert db.list_functions() == {}
 
     function_name = 'myfunctions::temperature::celsiustofahrenheit'
     function_body = 'function (celsius) { return celsius * 1.8 + 32; }'
 
     # Test create AQL function
     db.create_function(function_name, function_body)
-    assert db.get_functions() == {function_name: function_body}
+    assert db.list_functions() == {function_name: function_body}
 
     # Test create AQL function again (idempotency)
     db.create_function(function_name, function_body)
-    assert db.get_functions() == {function_name: function_body}
+    assert db.list_functions() == {function_name: function_body}
 
     # Test create invalid AQL function
     function_body = 'function (celsius) { invalid syntax }'
