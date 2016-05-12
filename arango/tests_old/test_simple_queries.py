@@ -153,8 +153,8 @@ class SimpleQueriesTest(unittest.TestCase):
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.find_and_delete({"value": 1})
-        self.col.find_and_delete({"value": 2})
+        self.col.delete_many({"value": 1})
+        self.col.delete_many({"value": 2})
         self.assertEqual(
             strip_system_keys(self.col.all()),
             [{"name": "test_doc_03", "value": 3}]
@@ -170,7 +170,7 @@ class SimpleQueriesTest(unittest.TestCase):
         ])
         self.assertEqual(
             strip_system_keys(
-                self.col.find_in_between(
+                self.col.find_in_range(
                     field="value",
                     left=2,
                     right=5,

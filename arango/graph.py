@@ -19,7 +19,7 @@ class Graph(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.APIConnection
+        :type connection: arango.connection.Connection
         :param name: the name of the graph
         :type name: str
         """
@@ -38,6 +38,15 @@ class Graph(object):
         :rtype: str
         """
         return self._name
+
+    @property
+    def database(self):
+        """Return the name of the database this graph belongs to.
+
+        :return: the name of the database
+        :rtype: str
+        """
+        return self._conn.db
 
     def options(self):
         """Return the properties of the graph.
@@ -73,36 +82,33 @@ class Graph(object):
         :rtype: list
         :raises: VertexCollectionListError
         """
-        res = self._conn.get(
-            "/_api/gharial/{}/vertex".format(self._name)
-        )
+        res = self._conn.get("/_api/gharial/{}/vertex".format(self._name))
         if res.status_code not in HTTP_OK:
             raise VertexCollectionListError(res)
         return res.body["collections"]
 
-    def create_vertex_collection(self, collection):
+    def create_vertex_collection(self, name):
         """Create a vertex collection to the graph.
 
-        :param collection: the name of the vertex collection to create
-        :type collection: str
+        :param name: the name of the vertex collection to create
+        :type name: str
         :returns: the updated list of the vertex collection names
         :rtype: list
         :raises: VertexCollectionCreateError
         """
         res = self._conn.post(
             "/_api/gharial/{}/vertex".format(self._name),
-            data={"collection": collection}
+            data={"collection": name}
         )
         if res.status_code not in HTTP_OK:
             raise VertexCollectionCreateError(res)
         return self.list_vertex_collections
 
-    def delete_vertex_collection(self, collection,
-                                 drop_collection=False):
+    def delete_vertex_collection(self, name, drop_collection=False):
         """Delete a vertex collection from the graph.
 
-        :param collection: the name of the vertex collection to delete
-        :type collection: str
+        :param name: the name of the vertex collection to delete
+        :type name: str
         :param drop_collection: whether or not to drop the collection also
         :type drop_collection: bool
         :returns: the updated list of the vertex collection names
@@ -110,7 +116,7 @@ class Graph(object):
         :raises: VertexCollectionDropError
         """
         res = self._conn.delete(
-            "/_api/gharial/{}/vertex/{}".format(self._name, collection),
+            "/_api/gharial/{}/vertex/{}".format(self._name, name),
             params={"dropCollection": drop_collection}
         )
         if res.status_code not in HTTP_OK:
@@ -130,8 +136,8 @@ class Graph(object):
         """
         return self.options["edge_definitions"]
 
-    def create_edge_definition(self, edge_collection, from_vertex_collections,
-                               to_vertex_collections):
+    def add_edge_definition(self, edge_collection, from_vertex_collections,
+                            to_vertex_collections):
         """Create a edge definition to this graph.
 
         :param edge_collection: the name of the edge collection
@@ -218,9 +224,9 @@ class Graph(object):
         :param vertex_id: the ID of the vertex to retrieve
         :type vertex_id: str
         :param rev: the vertex revision must match this value
-        :type rev: str or None
-        :returns: the requested vertex or None if not found
-        :rtype: dict or None
+        :type rev: str | None
+        :returns: the requested vertex | None if not found
+        :rtype: dict | None
         :raises: VertexRevisionError, VertexGetError
         """
         res = self._conn.get(
@@ -284,7 +290,7 @@ class Graph(object):
         :param data: the body to update the vertex with
         :type data: dict
         :param rev: the vertex revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :param keep_none: whether or not to keep the keys with value None
         :type keep_none: bool
         :param sync: wait for the update to sync to disk
@@ -331,7 +337,7 @@ class Graph(object):
         :param data: the body to replace the vertex with
         :type data: dict
         :param rev: the vertex revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :param sync: wait for replace to sync to disk
         :type sync: bool
         :returns: the id, rev and key of the replaced vertex
@@ -365,7 +371,7 @@ class Graph(object):
         :param vertex_id: the ID of the vertex to be deleted
         :type vertex_id: str
         :param rev: the vertex revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :raises: VertexRevisionError, VertexDeleteError
         """
         path = "/_api/gharial/{}/vertex/{}".format(self._name, vertex_id)
@@ -397,9 +403,9 @@ class Graph(object):
         :param edge_id: the ID of the edge to retrieve
         :type edge_id: str
         :param rev: the edge revision must match this value
-        :type rev: str or None
-        :returns: the requested edge or None if not found
-        :rtype: dict or None
+        :type rev: str | None
+        :returns: the requested edge | None if not found
+        :rtype: dict | None
         :raises: EdgeRevisionError, EdgeGetError
         """
         res = self._conn.get(
@@ -472,7 +478,7 @@ class Graph(object):
         :param data: the body to update the edge with
         :type data: dict
         :param rev: the edge revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :param keep_none: whether or not to keep the keys with value None
         :type keep_none: bool
         :param sync: wait for the update to sync to disk
@@ -522,7 +528,7 @@ class Graph(object):
         :param data: the body to replace the edge with
         :type data: dict
         :param rev: the edge revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :param sync: wait for the replace to sync to disk
         :type sync: bool
         :returns: the id, rev and key of the replaced edge
@@ -556,7 +562,7 @@ class Graph(object):
         :param edge_id: the ID of the edge to be deleted
         :type edge_id: str
         :param rev: the edge revision must match this value
-        :type rev: str or None
+        :type rev: str | None
         :raises: EdgeRevisionError, EdgeDeleteError
         """
         path = "/_api/gharial/{}/edge/{}".format(self._name, edge_id)

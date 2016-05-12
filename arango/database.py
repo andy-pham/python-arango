@@ -1,8 +1,11 @@
 from __future__ import unicode_literals
 
-from arango.cursor import cursor
+from arango.cursor import Cursor
 from arango.graph import Graph
-from arango.collection import Collection
+from arango.collection import (
+    Collection,
+    EdgeCollection
+)
 from arango.constants import (
     HTTP_OK,
     COLLECTION_TYPES,
@@ -27,7 +30,7 @@ class Database(object):
         """Initialize the database wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.APIConnection
+        :type connection: arango.connection.Connection
         """
         self._conn = connection
 
@@ -48,7 +51,7 @@ class Database(object):
         """
         return self._conn.db
 
-    def options(self):
+    def properties(self):
         """Return all properties of this database.
 
         :returns: the database properties
@@ -97,10 +100,21 @@ class Database(object):
         """
         return Collection(self._conn, name)
 
+    def edge_collection(self, name):
+        """Return the EdgeCollection object of the specified name.
+
+        :param name: the name of the edge collection
+        :type name: str
+        :returns: the requested edge collection object
+        :rtype: arango.collection.EdgeCollection
+        :raises: TypeError
+        """
+        return EdgeCollection(self._conn, name)
+
     def create_collection(self, name, sync=False, compact=True, system=False,
                           journal_size=None, edge=False, volatile=False,
-                          keygen="traditional", user_keys=True,
-                          key_offset=None, key_increment=None, shard_keys=None,
+                          user_keys=True, key_increment=None, key_offset=None,
+                          key_generator="traditional", shard_fields=None,
                           shard_count=None):
         """Create a new collection to this database.
 
@@ -114,26 +128,26 @@ class Database(object):
         :type system: bool
         :param journal_size: the max size of the journal or datafile
         :type journal_size: int
+        :param edge: whether or not the collection is an edge collection
+        :type edge: bool
         :param volatile: whether or not the collection is in-memory only
         :type volatile: bool
-        :param keygen: ``traditional`` or ``autoincrement``
-        :type keygen: str
+        :param key_generator: ``traditional`` or ``autoincrement``
+        :type key_generator: str
         :param user_keys: whether to allow users to supply keys
         :type user_keys: bool
         :param key_increment: increment value for ``autoincrement`` generator
         :type key_increment: int
         :param key_offset: initial offset value for ``autoincrement`` generator
         :type key_offset: int
-        :param edge: whether or not the collection is an edge collection
-        :type edge: bool
-        :param shard_keys: the attribute(s) used to determine the target shard
-        :type shard_keys: list
+        :param shard_fields: the field(s) used to determine the target shard
+        :type shard_fields: list
         :param shard_count: the number of shards to create
         :type shard_count: int
         :raises: CollectionCreateError
         """
         key_options = {
-            'type': keygen,
+            'type': key_generator,
             'allowUserKeys': user_keys
         }
         if key_increment is not None:
@@ -153,13 +167,13 @@ class Database(object):
             data['journalSize'] = journal_size
         if shard_count is not None:
             data['numberOfShards'] = shard_count
-        if shard_keys is not None:
-            data['shardKeys'] = shard_keys
+        if shard_fields is not None:
+            data['shardKeys'] = shard_fields
 
         res = self._conn.post('/_api/collection', data=data)
         if res.status_code not in HTTP_OK:
             raise CollectionCreateError(res)
-        return self.collection(name)
+        return self.edge_collection(name) if edge else self.collection(name)
 
     def drop_collection(self, name, ignore_missing=False):
         """Drop the specified collection from this database.
@@ -193,15 +207,15 @@ class Database(object):
         :param action: the javascript commands to be executed
         :type action: str
         :param read_collections: the collections read
-        :type read_collections: str or list or None
+        :type read_collections: str or list | None
         :param write_collections: the collections written to
-        :type write_collections: str or list or None
+        :type write_collections: str or list | None
         :param params: Parameters for the function in action
-        :type params: list or dict or None
+        :type params: list or dict | None
         :param sync: wait for the transaction to sync to disk
         :type sync: bool
         :param lock_timeout: timeout for waiting on collection locks
-        :type lock_timeout: int or None
+        :type lock_timeout: int | None
         :returns: the results of the execution
         :rtype: dict
         :raises: TransactionExecuteError
@@ -377,7 +391,8 @@ class Database(object):
         :type max_plans: None or int
         :param optimizer_rules: list of optimizer rules
         :type optimizer_rules: list
-        :returns: the cursor from executing the query
+        :returns: document cursor
+        :rtype: arango.cursor.Cursor
         :raises: AQLQueryExecuteError, CursorDeleteError
         """
         options = {}
@@ -401,7 +416,7 @@ class Database(object):
         res = self._conn.post('/_api/cursor', data=data)
         if res.status_code not in HTTP_OK:
             raise AQLQueryExecuteError(res)
-        return cursor(self._conn, res)
+        return Cursor(self._conn, res)
 
     #################
     # AQL Functions #
@@ -487,9 +502,9 @@ class Database(object):
         """Configure the AQL query cache.
 
         :param mode: the mode to operate in (off/on/demand)
-        :type mode: str or None
+        :type mode: str | None
         :param limit: max number of results to be stored
-        :type limit: int or None
+        :type limit: int | None
         :returns: the response
         :rtype: dict
         :raises: AQLQueryCacheSetError

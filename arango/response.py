@@ -4,7 +4,7 @@ import json
 
 
 class Response(object):
-    """ArangoDB HTTP Response class.
+    """ArangoDB HTTP response class.
 
     The clients in arango.clients must return an instance of this class.
 
@@ -15,7 +15,7 @@ class Response(object):
     :param status_code: the HTTP status code
     :type status_code: int
     :param status_text: the HTTP status description if any
-    :type status_text: str or None
+    :type status_text: str | None
     :param body: the HTTP response body
     :type body: str or dict
     """

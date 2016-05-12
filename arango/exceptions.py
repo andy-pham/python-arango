@@ -282,7 +282,11 @@ class DocumentGetError(ArangoError):
 
 
 class DocumentInsertError(ArangoError):
-    """Failed to create the document."""
+    """Failed to insert the document."""
+
+
+class DocumentInsertManyError(ArangoError):
+    """Failed to insert the documents in bulk."""
 
 
 class DocumentReplaceError(ArangoError):
@@ -451,7 +455,7 @@ class DocumentFindOneError(ArangoError):
     """Failed to execute the ``first-example`` simple query."""
 
 
-class DocumentFindAndReplaceError(ArangoError):
+class DocumentReplaceManyError(ArangoError):
     """Failed to execute the ``replace-by-example`` simple query."""
 
 
@@ -459,7 +463,7 @@ class DocumentFindAndUpdateError(ArangoError):
     """Failed to execute the ``update-by-example`` simple query."""
 
 
-class DocumentFindAndDeleteError(ArangoError):
+class DocumentDeleteManyError(ArangoError):
     """Failed to execute the ``Delete-by-example`` simple query."""
 
 
@@ -479,7 +483,7 @@ class DocumentGetRandomError(ArangoError):
     """Failed to execute the ``any`` simple query."""
 
 
-class DocumentFindBetweenError(ArangoError):
+class DocumentFindInRangeError(ArangoError):
     """Failed to execute the ``range`` simple query."""
 
 

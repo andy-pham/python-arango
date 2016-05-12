@@ -9,20 +9,30 @@ from arango.exceptions import *
 from arango.tests.utils import (
     generate_db_name,
     generate_col_name,
+    generate_graph_name,
     clean_keys
 )
 
 
 def setup_module(*_):
-    global driver, db_name, db, col_name, collection
+    global driver, db_name, db
+    global from_col_name, from_col, to_col_name, to_col
+    global graph_name, graph, edges, sources, targets
 
     driver = Arango()
     db_name = generate_db_name(driver)
     db = driver.create_database(db_name)
-    col_name = generate_col_name(db)
-    collection = db.create_collection(col_name)
-    collection.add_geo_index(['coordinates'])
 
+    from_col_name = generate_col_name(db)
+    from_col = db.create_collection(from_col_name, edge=True)
+
+    from_
+
+    sources_name = generate_col_name(db)
+    sources =
+
+    graph_name = generate_graph_name(db)
+    graph = db.create_graph()
 
 def teardown_module(*_):
     driver.drop_database(db_name, ignore_missing=True)
@@ -251,7 +261,7 @@ def test_update():
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] is None
-    
+
     doc = collection.update_one('1', {'foo': {'bar': 1}}, sync=True)
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'

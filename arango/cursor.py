@@ -7,27 +7,41 @@ from arango.exceptions import (
 )
 
 
-def cursor(connection, response):
-    """Continuously read from the server cursor and yield the result.
+class Cursor(object):
 
-    :param connection: ArangoDB connection object
-    :type connection: arango.connection.APIConnection
-    :param response: ArangoDB response object
-    :type response: arango.response.Response
-    :raises: CursorExecuteError, CursorDeleteError
-    """
-    for item in response.body["result"]:
-        yield item
-    cursor_id = None
-    while response.body["hasMore"]:
-        if cursor_id is None:
-            cursor_id = response.body["id"]
-        response = connection.put("/_api/cursor/{}".format(cursor_id))
-        if response.status_code not in HTTP_OK:
-            raise CursorGetNextError(response)
-        for item in response.body["result"]:
-            yield item
-    if cursor_id is not None:
-        response = connection.delete("/api/cursor/{}".format(cursor_id))
-        if response.status_code not in {404, 202}:
-            raise CursorDeleteError(response)
+    def __init__(self, connection, response):
+        """Continuously read from the server cursor and yield the result.
+
+        :param connection: ArangoDB connection object
+        :type connection: arango.connection.Connection
+        :param response: ArangoDB response object
+        :type response: arango.response.Response
+        :raises: CursorExecuteError, CursorDeleteError
+        """
+        self._conn = connection
+        self._id = response.body.get('id')
+        self._items = response.body['result']
+        self._has_more = response.body['hasMore']
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        if not self._items and self._has_more:
+            res = self._conn.put("/_api/cursor/{}".format(self._id))
+            if res.status_code not in HTTP_OK:
+                raise CursorGetNextError(res)
+            self._id = res.body.get('id')
+            self._items = res.body['result']
+            self._has_more = res.body['hasMore']
+        elif not self._items and not self._has_more:
+            if self._id is not None:
+                res = self._conn.delete("/api/cursor/{}".format(self._id))
+                if res.status_code not in {404, 202}:
+                    raise CursorDeleteError(res)
+            raise StopIteration()
+        return self._items.pop(0)
+

@@ -130,7 +130,7 @@ class GraphManagementTest(unittest.TestCase):
             "from": [vertex_col_name],
             "to": [vertex_col_name]
         }
-        graph.create_edge_definition(
+        graph.add_edge_definition(
             edge_col_name,
             [vertex_col_name],
             [vertex_col_name]
@@ -169,7 +169,7 @@ class GraphManagementTest(unittest.TestCase):
             "from": [vertex_col_name],
             "to": [vertex_col_name]
         }
-        graph.create_edge_definition(
+        graph.add_edge_definition(
             edge_col_name,
             [vertex_col_name],
             [vertex_col_name]

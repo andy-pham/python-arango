@@ -62,13 +62,13 @@ class CollectionManagementTest(unittest.TestCase):
             journal_size=7774208,
             system=False,
             volatile=False,
-            keygen="autoincrement",
+            key_generator="autoincrement",
             user_keys=False,
             key_increment=9,
             key_offset=100,
             edge=True,
             shard_count=2,
-            shard_keys=["test_attr"],
+            shard_fields=["test_attr"],
         )
         # Ensure that the new collection's properties are set correctly
         self.assertEqual(col.name, col_name)

@@ -4,11 +4,11 @@ import json
 
 from six import string_types
 
+from arango.client import Client
 from arango.constants import DEFAULT_DB
-from arango.clients import DefaultHTTPClient
 
 
-class APIConnection(object):
+class Connection(object):
     """Connection used to make API calls to ArangoDB.
 
     :param protocol: the internet transfer protocol (default: 'http')
@@ -24,7 +24,7 @@ class APIConnection(object):
     :param database: the ArangoDB database to point the API calls to
     :type database: str
     :param client: the HTTP client
-    :type client: arango.clients.base.BaseHTTPClient or None
+    :type client: arango.clients.base.BaseHTTPClient | None
     """
 
     def __init__(self, protocol='http', host='localhost', port=8529,
@@ -34,15 +34,26 @@ class APIConnection(object):
         self._host = host
         self._port = port
         self._database = database
-        self._url_prefix = '{protocol}://{host}:{port}/_db/{db}'.format(
+        self._url_prefix = '{}://{}:{}/_db/{}'.format(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
             db=self._database,
         )
-        self._client = client if client else DefaultHTTPClient()
+        self._client = Client(
+            protocol=protocol,
+            host=host,
+            port=port,
+            database=database,
+            username=username,
+            password=password
+        )
         self._username = username
         self._password = password
+
+    def __repr__(self):
+        """Return a descriptive string of this instance."""
+        return "<ArangoDB connection at '{}'>".format(self._url_prefix)
 
     @property
     def protocol(self):
@@ -86,14 +97,14 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.head(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password)
@@ -105,14 +116,14 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.get(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password),
@@ -124,16 +135,16 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
-        :type data: str or dict or None
+        :type data: str or dict | None
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.put(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
@@ -146,16 +157,16 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
-        :type data: str or dict or None
+        :type data: str or dict | None
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.post(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
@@ -168,16 +179,16 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param data: the request payload
-        :type data: str or dict or None
+        :type data: str or dict | None
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.patch(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             data=data if isinstance(data, string_types) else json.dumps(data),
             params=params,
             headers=headers,
@@ -190,14 +201,14 @@ class APIConnection(object):
         :param endpoint: the API endpoint
         :type endpoint: str
         :param params: the request parameters
-        :type params: dict or None
+        :type params: dict | None
         :param headers: the request headers
-        :type headers: dict or None
+        :type headers: dict | None
         :returns: the ArangoDB http response
         :rtype: arango.response.Response
         """
         return self._client.delete(
-            url=self._url_prefix + endpoint,
+            endpoint=self._url_prefix + endpoint,
             params=params,
             headers=headers,
             auth=(self._username, self._password)

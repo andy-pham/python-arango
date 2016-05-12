@@ -35,7 +35,7 @@ def test_properties():
 
 
 def test_options():
-    options = db.options()
+    options = db.properties()
     assert 'id' in options
     assert 'path' in options
     assert options['system'] == False
@@ -65,15 +65,15 @@ def test_collection_management():
         journal_size=7774208,
         system=False,
         volatile=False,
-        keygen="autoincrement",
+        key_generator="autoincrement",
         user_keys=False,
         key_increment=9,
         key_offset=100,
         edge=True,
         shard_count=2,
-        shard_keys=["test_attr"]
+        shard_fields=["test_attr"]
     )
-    options = col.options()
+    options = col.properties()
     assert 'id' in options
     assert options['name'] == new_col_name
     assert options['sync'] == True

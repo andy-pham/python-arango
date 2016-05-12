@@ -54,7 +54,7 @@ def test_server_details():
 
 
 def test_target_version():
-    version = driver.target_version()
+    version = driver.required_db_version()
     assert isinstance(version, string_types)
 
 
@@ -87,7 +87,7 @@ def test_server_time():
 
 
 def test_echo():
-    last_request = driver.echo()
+    last_request = driver.last_request()
     assert 'protocol' in last_request
     assert 'user' in last_request
     assert 'requestType' in last_request

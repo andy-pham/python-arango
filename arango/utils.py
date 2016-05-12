@@ -27,11 +27,11 @@ def stringify_request(method, path, params=None, headers=None, data=None):
     :param path: the API path (e.g. '/_api/version')
     :type path: str
     :param params: the request parameters
-    :type params: dict or None
+    :type params: dict | None
     :param headers: the request headers
-    :type headers: dict or None
+    :type headers: dict | None
     :param data: the request payload
-    :type data: dict or None
+    :type data: dict | None
     :returns: the stringified request
     :rtype: str
     """

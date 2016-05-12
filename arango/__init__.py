@@ -7,7 +7,7 @@ from datetime import datetime
 from requests import ConnectionError
 
 from arango.clients import DefaultHTTPClient
-from arango.connection import APIConnection
+from arango.connection import Connection
 from arango.constants import HTTP_OK, LOG_LEVELS, DEFAULT_DB
 from arango.database import Database
 from arango.exceptions import *
@@ -39,7 +39,7 @@ class Arango(object):
         :param password: ArangoDB password (default: '')
         :type password: str
         :param client: the HTTP client
-        :type client: arango.clients.base.BaseHTTPClient or None
+        :type client: arango.clients.base.BaseHTTPClient | None
         :param verify: check the connection during initialization
         :type verify: bool
         :raises: ServerConnectionError
@@ -52,8 +52,15 @@ class Arango(object):
         self._client = client if client else DefaultHTTPClient()
         self._version = VERSION
 
+        self._url_prefix = '{}://{}:{}/_db/{}'.format(
+            protocol=self._protocol,
+            host=self._host,
+            port=self._port,
+            db=self._database,
+        )
+
         # Initialize the ArangoDB API connection object
-        self._conn = APIConnection(
+        self._conn = Connection(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
@@ -69,6 +76,11 @@ class Arango(object):
 
         # Initialize the default database
         self._default_db = Database(self._conn)
+
+
+
+
+
 
     def __repr__(self):
         """Return a descriptive string of this instance."""
@@ -118,6 +130,129 @@ class Arango(object):
         """
         return self._version
 
+    def head(self, endpoint, params=None, headers=None):
+        """Call a HEAD endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.head(
+            endpoint=self._url_prefix + endpoint,
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password)
+        )
+
+    def get(self, endpoint, params=None, headers=None):
+        """Call a GET endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.get(
+            endpoint=self._url_prefix + endpoint,
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password),
+        )
+
+    def put(self, endpoint, data=None, params=None, headers=None):
+        """Call a PUT endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param data: the request payload
+        :type data: str or dict | None
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.put(
+            endpoint=self._url_prefix + endpoint,
+            data=data if isinstance(data, string_types) else json.dumps(data),
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password)
+        )
+
+    def post(self, endpoint, data=None, params=None, headers=None):
+        """Call a POST endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param data: the request payload
+        :type data: str or dict | None
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.post(
+            endpoint=self._url_prefix + endpoint,
+            data=data if isinstance(data, string_types) else json.dumps(data),
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password)
+        )
+
+    def patch(self, endpoint, data=None, params=None, headers=None):
+        """Call a PATCH endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param data: the request payload
+        :type data: str or dict | None
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.patch(
+            endpoint=self._url_prefix + endpoint,
+            data=data if isinstance(data, string_types) else json.dumps(data),
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password)
+        )
+
+    def delete(self, endpoint, params=None, headers=None):
+        """Call a DELETE endpoint in ArangoDB's REST API.
+
+        :param endpoint: the API endpoint
+        :type endpoint: str
+        :param params: the request parameters
+        :type params: dict | None
+        :param headers: the request headers
+        :type headers: dict | None
+        :returns: the ArangoDB http response
+        :rtype: arango.response.Response
+        """
+        return self._client.delete(
+            endpoint=self._url_prefix + endpoint,
+            params=params,
+            headers=headers,
+            auth=(self._username, self._password)
+        )
+
     def server_version(self):
         """Return the version of the ArangoDB server.
 
@@ -148,7 +283,7 @@ class Arango(object):
             raise DetailsGetError(res)
         return res.body['details']
 
-    def target_version(self):
+    def required_db_version(self):
         """Return the required version of the target database.
 
         :returns: the required version of the target database
@@ -228,7 +363,7 @@ class Arango(object):
             raise EndpointsGetError(res)
         return res.body
 
-    def echo(self):
+    def last_request(self):
         """Return information on the last request (headers, payload etc.)
 
         :returns: the information on the last request
@@ -320,19 +455,19 @@ class Arango(object):
         The values for ``sort`` are 'asc' or 'desc'.
 
         :param upto: return entries up to this level
-        :type upto: str or int or None
+        :type upto: str or int | None
         :param level: return entries of this level only
-        :type level: str or int or None
+        :type level: str or int | None
         :param start: return entries whose id >= to the given value
-        :type start: int or None
+        :type start: int | None
         :param size: restrict the result to the given value
-        :type size: int or None
+        :type size: int | None
         :param offset: return entries skipping the given number
-        :type offset: int or None
+        :type offset: int | None
         :param search: return only the entires containing the given text
-        :type search: str or None
+        :type search: str | None
         :param sort: sort the entries according to their lid values
-        :type sort: str or None
+        :type sort: str | None
         :returns: the server log
         :rtype: dict
         :raises: LogGetError
@@ -403,17 +538,17 @@ class Arango(object):
         Setting ``throttle_when_pending`` to 0 disables the throttling.
 
         :param oversized_ops: execute and store ops bigger than a log file
-        :type oversized_ops: bool or None
+        :type oversized_ops: bool | None
         :param log_size: the size of each write-ahead log file
-        :type log_size: int or None
+        :type log_size: int | None
         :param historic_logs: the number of historic log files to keep
-        :type historic_logs: int or None
+        :type historic_logs: int | None
         :param reserve_logs: the number of reserve log files to allocate
-        :type reserve_logs: int or None
+        :type reserve_logs: int | None
         :param throttle_wait: wait time before aborting when throttled (in ms)
-        :type throttle_wait: int or None
+        :type throttle_wait: int | None
         :param throttle_limit: number of pending gc ops before write-throttling
-        :type throttle_limit: int or None
+        :type throttle_limit: int | None
         :returns: the new configuration of the write-ahead log
         :rtype: dict
         :raises: WriteAheadLogGetError
@@ -517,6 +652,16 @@ class Arango(object):
             raise DatabaseListError(res)
         return res.body['result']
 
+    def database(self, name=DEFAULT_DB):
+        """Return the database object of the specified name.
+
+        :param name: the name of the database
+        :type name: str
+        :returns: the database object
+        :rtype: arango.database.Database
+        """
+        return self.db(name)
+
     def db(self, name=DEFAULT_DB):
         """Return the database object of the specified name.
 
@@ -525,7 +670,7 @@ class Arango(object):
         :returns: the database object
         :rtype: arango.database.Database
         """
-        return Database(APIConnection(
+        return Database(Connection(
             protocol=self._protocol,
             host=self._host,
             port=self._port,
@@ -608,11 +753,11 @@ class Arango(object):
         :param password: the user password
         :type password: str
         :param active: whether the user is active
-        :type active: bool or None
+        :type active: bool | None
         :param extra: any extra data about the user
-        :type extra: dict or None
+        :type extra: dict | None
         :param change_password: whether the user must change the password
-        :type change_password: bool or None
+        :type change_password: bool | None
         :returns: the information about the new user
         :rtype: dict
         :raises: UserCreateError
@@ -648,11 +793,11 @@ class Arango(object):
         :param password: the user password
         :type password: str
         :param active: whether the user is active
-        :type active: bool or None
+        :type active: bool | None
         :param extra: any extra data about the user
-        :type extra: dict or None
+        :type extra: dict | None
         :param change_password: whether the user must change the password
-        :type change_password: bool or None
+        :type change_password: bool | None
         :returns: the information about the updated user
         :rtype: dict
         :raises: UserUpdateError
@@ -692,11 +837,11 @@ class Arango(object):
         :param password: the user password
         :type password: str
         :param active: whether the user is active
-        :type active: bool or None
+        :type active: bool | None
         :param extra: any extra data about the user
-        :type extra: dict or None
+        :type extra: dict | None
         :param change_password: whether the user must change the password
-        :type change_password: bool or None
+        :type change_password: bool | None
         :returns: the information about the replaced user
         :rtype: dict
         :raises: UserReplaceError
