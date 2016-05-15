@@ -91,7 +91,7 @@ class CollectionManagementTest(unittest.TestCase):
         self.assertTrue(col.sync)
         self.assertTrue(col.is_edge)
         self.assertTrue(is_str(col.id))
-        self.assertTrue(isinstance(col.server_statistics(), dict))
+        self.assertTrue(isinstance(col.statistics(), dict))
 
     def test_collection_setters(self):
         # Create a new collection with predefined properties

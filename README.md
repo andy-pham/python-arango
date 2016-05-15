@@ -211,16 +211,16 @@ AQL Functions
 ```python
 my_db = a.db("my_db")
 
-# List the AQL functions defined in database "my_db"
+Query
 my_db.aql_functions
 
-# Create a new AQL function
+Query
 my_db.create_aql_function(
   "myfunctions::temperature::ctof",
   "function (celsius) { return celsius * 1.8 + 32; }"
 )
 
-# Delete an AQL function
+Query
 my_db.delete_aql_function("myfunctions::temperature::ctof")
 ```
 

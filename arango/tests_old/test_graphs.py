@@ -74,7 +74,7 @@ class GraphManagementTest(unittest.TestCase):
             sorted(graph.list_vertex_collections),
             sorted([orphan_col_name, vertex_col_name])
         )
-        properties = graph.options
+        properties = graph.details
         del properties["_rev"]
         del properties["_id"]
         self.assertEqual(

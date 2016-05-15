@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import pytest
 from six import string_types
 
-from arango import Arango
+from arango.connection import Connection
 from arango.constants import COLLECTION_STATUSES
 from arango.exceptions import *
 from arango.tests.utils import (
@@ -14,18 +14,18 @@ from arango.tests.utils import (
 
 
 def setup_module(*_):
-    global driver, db_name, db, col_name, collection
+    global conn, db_name, db, col_name, collection
 
-    driver = Arango()
-    db_name = generate_db_name(driver)
-    db = driver.create_database(db_name)
+    conn = Connection()
+    db_name = generate_db_name(conn)
+    db = conn.create_database(db_name)
     col_name = generate_col_name(db)
     collection = db.create_collection(col_name)
     collection.add_geo_index(['coordinates'])
 
 
 def teardown_module(*_):
-    driver.drop_database(db_name, ignore_missing=True)
+    conn.drop_database(db_name, ignore_missing=True)
 
 
 def setup_function(*_):
@@ -36,44 +36,11 @@ def setup_function(*_):
 
 def test_properties():
     assert collection.name == col_name
-    assert collection.database == db_name
     assert repr(collection) == "<ArangoDB collection '{}'>".format(col_name)
 
 
-def test_rename():
-    assert collection.name == col_name
-    new_name = generate_col_name(driver)
-
-    result = collection.rename(new_name)
-    assert result is True
-    assert collection.name == new_name
-    assert collection.database == db_name
-    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
-
-    # Try again (the operation should be idempotent)
-    result = collection.rename(new_name)
-    assert result is True
-    assert collection.name == new_name
-    assert collection.database == db_name
-    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
-
-
-def test_statistics():
-    stats = collection.statistics()
-    assert 'alive' in stats
-    assert 'compactors' in stats
-    assert 'dead' in stats
-    assert 'document_refs' in stats
-    assert 'journals' in stats
-
-
-def test_revision():
-    revision = collection.revision()
-    assert isinstance(revision, string_types)
-
-
 def test_options():
-    options = collection.properties()
+    options = collection.options()
     assert 'id' in options
     assert options['status'] in COLLECTION_STATUSES.values()
     assert options['name'] == col_name
@@ -92,19 +59,49 @@ def test_options():
 
 
 def test_set_options():
-    options = collection.properties()
+    options = collection.options()
     old_sync = options['sync']
     old_journal_size = options['journal_size']
 
     new_sync = not old_sync
     new_journal_size = old_journal_size + 1
-    result = collection.set_properties(
+    result = collection.set_options(
         sync=new_sync, journal_size=new_journal_size
     )
     assert isinstance(result, bool)
-    new_options = collection.properties()
+    new_options = collection.options()
     assert new_options['sync'] == new_sync
     assert new_options['journal_size'] == new_journal_size
+
+
+def test_rename():
+    assert collection.name == col_name
+    new_name = generate_col_name(db)
+
+    result = collection.rename(new_name)
+    assert result is True
+    assert collection.name == new_name
+    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
+
+    # Try again (the operation should be idempotent)
+    result = collection.rename(new_name)
+    assert result is True
+    assert collection.name == new_name
+    assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
+
+
+def test_statistics():
+    stats = collection.statistics()
+    assert 'alive' in stats
+    assert 'compactors' in stats
+    assert 'dead' in stats
+    assert 'document_refs' in stats
+    assert 'journals' in stats
+
+
+def test_revision():
+    revision = collection.revision()
+    assert isinstance(revision, string_types)
 
 
 def test_load():
@@ -155,14 +152,14 @@ def test_insert():
     assert len(collection) == 5
     for key in range(1, 6):
         assert key in collection
-        document = collection.get(key)
+        document = collection.get_one(key)
         assert document['_key'] == str(key)
         assert document['foo'] == key * 100
 
     assert '6' not in collection
     collection.insert_one({'_key': '6', 'foo': 200}, sync=True)
     assert '6' in collection
-    assert collection.get('6')['foo'] == 200
+    assert collection.get_one('6')['foo'] == 200
 
     with pytest.raises(DocumentInsertError):
         collection.insert_one({'_key': '1', 'foo': 300})
@@ -183,7 +180,7 @@ def test_insert_many():
     assert len(collection) == 5
     for key in range(1, 6):
         assert key in collection
-        document = collection.get(key)
+        document = collection.get_one(key)
         assert document['_key'] == str(key)
         assert document['foo'] == key * 100
 
@@ -204,17 +201,17 @@ def test_insert_many():
 
 def test_get():
     collection.insert_one({'_key': '1', 'foo': 100})
-    doc = collection.get('1')
+    doc = collection.get_one('1')
     assert doc['foo'] == 100
 
     old_rev = doc['_rev']
     new_rev = str(int(old_rev) + 1)
 
-    assert collection.get('2') is None
-    assert collection.get('1', revision=old_rev) == doc
+    assert collection.get_one('2') is None
+    assert collection.get_one('1', revision=old_rev) == doc
 
     with pytest.raises(DocumentRevisionError):
-        collection.get('1', revision=new_rev)
+        collection.get_one('1', revision=new_rev)
 
 
 def test_get_many():
@@ -335,7 +332,7 @@ def test_delete():
     new_rev = str(int(old_rev) + 1)
 
     with pytest.raises(DocumentRevisionError):
-        collection.delete('3', rev=new_rev)
+        collection.delete('3', revision=new_rev)
     assert '3' in collection
     assert len(collection) == 1
 
@@ -542,7 +539,7 @@ def test_find_many():
 
 
 def test_find_and_update():
-    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 0
+    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -551,11 +548,11 @@ def test_find_and_update():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.find_and_update({'foo': 200}, {'bar': 100}) == 1
+    assert collection.update_matches({'foo': 200}, {'bar': 100}) == 1
     assert collection['4']['foo'] == 200
     assert collection['4']['bar'] == 100
 
-    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 3
+    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert collection[key]['foo'] == 100
         assert collection[key]['bar'] == 100
@@ -563,18 +560,18 @@ def test_find_and_update():
     assert collection['5']['foo'] == 300
     assert 'bar' not in collection['5']
 
-    assert collection.find_and_update(
+    assert collection.update_matches(
         {'foo': 300}, {'foo': None}, sync=True, keep_none=True
     ) == 1
     assert collection['5']['foo'] is None
-    assert collection.find_and_update(
+    assert collection.update_matches(
         {'foo': 200}, {'foo': None}, sync=True, keep_none=False
     ) == 1
     assert 'foo' not in collection['4']
 
 
 def test_find_and_replace():
-    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 0
+    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -583,11 +580,11 @@ def test_find_and_replace():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.find_and_replace({'foo': 200}, {'bar': 100}) == 1
+    assert collection.replace_matches({'foo': 200}, {'bar': 100}) == 1
     assert 'foo' not in collection['4']
     assert collection['4']['bar'] == 100
 
-    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 3
+    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert 'foo' not in collection[key]
         assert collection[key]['bar'] == 100
@@ -597,7 +594,7 @@ def test_find_and_replace():
 
 
 def test_find_and_delete():
-    assert collection.delete_many({'foo': 100}) == 0
+    assert collection.delete_matches({'foo': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -606,13 +603,13 @@ def test_find_and_delete():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.delete_many({'foo': 200}) == 1
+    assert collection.delete_matches({'foo': 200}) == 1
     assert '4' not in collection
 
-    assert collection.delete_many({'foo': 300}, sync=True) == 1
+    assert collection.delete_matches({'foo': 300}, sync=True) == 1
     assert '4' not in collection
 
-    assert collection.delete_many({'foo': 100}, limit=2) == 2
+    assert collection.delete_matches({'foo': 100}, limit=2) == 2
     count = 0
     for key in ['1', '2', '3']:
         if key in collection:
@@ -637,7 +634,7 @@ def test_find_near():
         {'_key': '1', 'coordinates': [1, 1]},
         {'_key': '2', 'coordinates': [2, 2]}
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
     result = collection.find_near(
         latitude=4,
@@ -649,7 +646,7 @@ def test_find_near():
         {'_key': '2', 'coordinates': [2, 2]},
         {'_key': '1', 'coordinates': [1, 1]},
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
 
 def test_find_in_range():
@@ -672,7 +669,7 @@ def test_find_in_range():
         {'_key': '3', 'value': 3},
         {'_key': '4', 'value': 4},
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
 
 # TODO the WITHIN geo function does not seem to work properly
@@ -705,7 +702,7 @@ def test_find_in_rectangle():
         {'_key': '3', 'coordinates': [5, 1]},
         {'_key': '1', 'coordinates': [1, 1]}
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
     result = collection.find_in_rectangle(
         latitude1=0,
@@ -717,7 +714,7 @@ def test_find_in_rectangle():
     expected = [
         {'_key': '3', 'coordinates': [5, 1]}
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
     result = collection.find_in_rectangle(
         latitude1=0,
@@ -729,7 +726,7 @@ def test_find_in_rectangle():
     expected = [
         {'_key': '1', 'coordinates': [1, 1]}
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
 
 def test_find_text():
@@ -746,7 +743,7 @@ def test_find_text():
         {'_key': '1', 'text': 'foo'},
         {'_key': '2', 'text': 'bar'}
     ]
-    assert clean_keys(result) == expected
+    assert clean_keys(list(result)) == expected
 
     # Bad parameter
     with pytest.raises(DocumentFindTextError):
@@ -758,7 +755,7 @@ def test_find_text():
 
 def test_list_indexes():
     expected_index = {
-        'selectivity_estimate': 1,
+        'selectivity': 1,
         'sparse': False,
         'type': 'primary',
         'fields': ['_key'],
@@ -772,7 +769,7 @@ def test_list_indexes():
 def test_add_hash_index():
     collection.add_hash_index(['attr1', 'attr2'], unique=True)
     expected_index = {
-        'selectivity_estimate': 1,
+        'selectivity': 1,
         'sparse': False,
         'type': 'hash',
         'fields': ['attr1', 'attr2'],
@@ -871,6 +868,3 @@ def test_delete_index():
     for index_id in new_indexes - old_indexes:
         collection.delete_index(index_id)
     assert set(collection.list_indexes()) == old_indexes
-
-
-

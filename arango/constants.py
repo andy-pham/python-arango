@@ -1,6 +1,3 @@
-# Name of the default database
-DEFAULT_DB = '_system'
-
 # Valid collection types
 COLLECTION_TYPES = {
     2: 'document',

@@ -39,15 +39,6 @@ class Graph(object):
         """
         return self._name
 
-    @property
-    def database(self):
-        """Return the name of the database this graph belongs to.
-
-        :return: the name of the database
-        :rtype: str
-        """
-        return self._conn.db
-
     def options(self):
         """Return the properties of the graph.
 

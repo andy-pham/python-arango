@@ -1,4 +1,4 @@
-"""ArangoDB Cursor."""
+from __future__ import absolute_import, unicode_literals
 
 from arango.constants import HTTP_OK
 from arango.exceptions import (
@@ -10,7 +10,7 @@ from arango.exceptions import (
 class Cursor(object):
 
     def __init__(self, connection, response):
-        """Continuously read from the server cursor and yield the result.
+        """Fetch from the server cursor and yield.
 
         :param connection: ArangoDB connection object
         :type connection: arango.connection.Connection
@@ -44,4 +44,3 @@ class Cursor(object):
                     raise CursorDeleteError(res)
             raise StopIteration()
         return self._items.pop(0)
-

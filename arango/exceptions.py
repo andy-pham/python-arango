@@ -4,7 +4,7 @@
 class ArangoError(Exception):
     """Base class for ArangoDB request errors.
 
-    :param response: the Response object
+    :param response: the response object
     :type response: arango.response.Response
     """
 
@@ -15,7 +15,7 @@ class ArangoError(Exception):
         elif response.status_text is not None:
             message = response.status_text
         else:
-            message = "server error"
+            message = "request failed"
 
         # Get the ArangoDB error number if given
         if response.body is not None and "errorNum" in response.body:
@@ -25,29 +25,14 @@ class ArangoError(Exception):
 
         # Generate the error message for the exception
         super(ArangoError, self).__init__(message)
+        self.message = message
         self.method = response.method
         self.url = response.url
         self.http_code = response.status_code
 
 
-class NotFoundError(KeyError):
-    """Base ArangoDB "not found" exception class.
-
-    :param name: the name of the missing ArangoDB object
-    :type name: str
-    """
-
-    def __init__(self, name):
-        self.name = name
-        super(NotFoundError, self).__init__(name)
-
-
 class ServerConnectionError(ArangoError):
     """Failed to connect to ArangoDB."""
-
-
-class InvalidArgumentError(Exception):
-    """The given argument(s) are invalid."""
 
 
 ###########################
@@ -79,7 +64,7 @@ class WriteAheadLogSetError(ArangoError):
     """Failed to configure the write-ahead log."""
 
 
-class SystemTimeGetError(ArangoError):
+class TimeGetError(ArangoError):
     """Failed to return the current system time."""
 
 
@@ -91,7 +76,7 @@ class SleepError(ArangoError):
     """Failed to suspend the execution."""
 
 
-class TargetVersionGetError(ArangoError):
+class TargetDatabaseGetError(ArangoError):
     """Failed to retrieve the required database version."""
 
 
@@ -99,7 +84,7 @@ class ShutdownError(ArangoError):
     """Failed to initiate a clean shutdown sequence."""
 
 
-class TestsExecuteError(ArangoError):
+class RunTestsError(ArangoError):
     """Failed to execute the specified tests on the server."""
 
 
@@ -112,8 +97,12 @@ class ProgramExecuteError(ArangoError):
 #########
 
 
+class TasksListError(ArangoError):
+    """Failed to list the active server tasks."""
+
+
 class TaskGetError(ArangoError):
-    """Failed to get the active server tasks."""
+    """Failed to get the active server task."""
 
 
 class TaskCreateError(ArangoError):
@@ -129,16 +118,12 @@ class TaskDeleteError(ArangoError):
 #######################
 
 
-class DatabaseNotFoundError(NotFoundError):
-    """Failed to find the database."""
-
-
 class DatabaseListError(ArangoError):
     """Failed to get the list of databases."""
 
 
-class DatabasePropertyError(ArangoError):
-    """Failed to get the database property."""
+class DatabaseOptionsGetError(ArangoError):
+    """Failed to get the database options."""
 
 
 class DatabaseGetError(ArangoError):
@@ -156,10 +141,6 @@ class DatabaseDeleteError(ArangoError):
 ###################
 # User Exceptions #
 ###################
-
-
-class UserNotFoundError(NotFoundError):
-    """Failed to get the user."""
 
 
 class UserListError(ArangoError):
@@ -185,10 +166,6 @@ class UserDeleteError(ArangoError):
 #########################
 # Collection Exceptions #
 #########################
-
-
-class CollectionCorruptedError(Exception):
-    """The collection is corrupted (i.e. its status is ``unknown``)."""
 
 
 class CollectionNotFoundError(ArangoError):
@@ -306,10 +283,6 @@ class DocumentDeleteError(ArangoError):
 ###################
 
 
-class EdgeInvalidError(Exception):
-    """The edge is invalid (malformed)."""
-
-
 class EdgeRevisionError(ArangoError):
     """The expected and actual edge revisions do not match."""
 
@@ -385,32 +358,32 @@ class IndexDeleteError(ArangoError):
 
 
 ################################
-# AQL Query & Cache Exceptions #
+# Query Query & Cache Exceptions #
 ################################
 
 
-class AQLQueryExplainError(ArangoError):
-    """Failed to explain the AQL query."""
+class QueryExplainError(ArangoError):
+    """Failed to explain the Query query."""
 
 
-class AQLQueryValidateError(ArangoError):
-    """Failed to validate the AQL query."""
+class QueryValidateError(ArangoError):
+    """Failed to validate the Query query."""
 
 
 class AQLQueryExecuteError(ArangoError):
-    """Failed to execute the AQL query."""
+    """Failed to execute the Query query."""
 
 
 class AQLQueryCacheClearError(ArangoError):
-    """Failed to clear the AQL query cache."""
+    """Failed to clear the Query query cache."""
 
 
 class AQLQueryCacheGetError(ArangoError):
-    """Failed to get the AQL query cache properties."""
+    """Failed to get the Query query cache properties."""
 
 
 class AQLQueryCacheConfigureError(ArangoError):
-    """Failed to configure the AQL query cache properties."""
+    """Failed to configure the Query query cache properties."""
 
 
 #####################
@@ -426,20 +399,20 @@ class CursorDeleteError(ArangoError):
 
 
 ###########################
-# AQL Function Exceptions #
+# Query Function Exceptions #
 ###########################
 
 
 class AQLFunctionListError(ArangoError):
-    """Failed to get the list of AQL functions."""
+    """Failed to get the list of Query functions."""
 
 
 class AQLFunctionCreateError(ArangoError):
-    """Failed to create the AQL function."""
+    """Failed to create the Query function."""
 
 
 class AQLFunctionDeleteError(ArangoError):
-    """Failed to delete the AQL function."""
+    """Failed to delete the Query function."""
 
 
 ###########################
@@ -525,10 +498,6 @@ class TransactionGetError(ArangoError):
 ####################
 
 
-class BatchInvalidError(Exception):
-    """The batch request is invalid (malformed)."""
-
-
 class BatchExecuteError(ArangoError):
     """Failed to execute a batch request."""
 
@@ -536,10 +505,6 @@ class BatchExecuteError(ArangoError):
 ####################
 # Graph Exceptions #
 ####################
-
-
-class GraphNotFoundError(NotFoundError):
-    """Failed to find the graph."""
 
 
 class GraphListError(ArangoError):
@@ -613,7 +578,7 @@ class LogGetError(ArangoError):
     """Failed to get the global log."""
 
 
-class RountingInfoReloadError(ArangoError):
+class RoutingReloadError(ArangoError):
     """Failed to reload the routing information."""
 
 

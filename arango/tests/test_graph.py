@@ -46,7 +46,7 @@ def setup_function(*_):
 
 def test_properties():
     assert collection.name == col_name
-    assert collection.database == db_name
+    assert collection.db == db_name
     assert repr(collection) == "<ArangoDB collection '{}'>".format(col_name)
 
 
@@ -57,14 +57,14 @@ def test_rename():
     result = collection.rename(new_name)
     assert result is True
     assert collection.name == new_name
-    assert collection.database == db_name
+    assert collection.db == db_name
     assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
 
     # Try again (the operation should be idempotent)
     result = collection.rename(new_name)
     assert result is True
     assert collection.name == new_name
-    assert collection.database == db_name
+    assert collection.db == db_name
     assert repr(collection) == "<ArangoDB collection '{}'>".format(new_name)
 
 
@@ -83,7 +83,7 @@ def test_revision():
 
 
 def test_options():
-    options = collection.properties()
+    options = collection.details()
     assert 'id' in options
     assert options['status'] in COLLECTION_STATUSES.values()
     assert options['name'] == col_name
@@ -102,17 +102,17 @@ def test_options():
 
 
 def test_set_options():
-    options = collection.properties()
+    options = collection.details()
     old_sync = options['sync']
     old_journal_size = options['journal_size']
 
     new_sync = not old_sync
     new_journal_size = old_journal_size + 1
-    result = collection.set_properties(
+    result = collection.set_options(
         sync=new_sync, journal_size=new_journal_size
     )
     assert isinstance(result, bool)
-    new_options = collection.properties()
+    new_options = collection.details()
     assert new_options['sync'] == new_sync
     assert new_options['journal_size'] == new_journal_size
 
@@ -345,7 +345,7 @@ def test_delete():
     new_rev = str(int(old_rev) + 1)
 
     with pytest.raises(DocumentRevisionError):
-        collection.delete('3', rev=new_rev)
+        collection.delete('3', revision=new_rev)
     assert '3' in collection
     assert len(collection) == 1
 
@@ -552,7 +552,7 @@ def test_find_many():
 
 
 def test_find_and_update():
-    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 0
+    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -561,11 +561,11 @@ def test_find_and_update():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.find_and_update({'foo': 200}, {'bar': 100}) == 1
+    assert collection.update_matches({'foo': 200}, {'bar': 100}) == 1
     assert collection['4']['foo'] == 200
     assert collection['4']['bar'] == 100
 
-    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 3
+    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert collection[key]['foo'] == 100
         assert collection[key]['bar'] == 100
@@ -573,18 +573,18 @@ def test_find_and_update():
     assert collection['5']['foo'] == 300
     assert 'bar' not in collection['5']
 
-    assert collection.find_and_update(
+    assert collection.update_matches(
         {'foo': 300}, {'foo': None}, sync=True, keep_none=True
     ) == 1
     assert collection['5']['foo'] is None
-    assert collection.find_and_update(
+    assert collection.update_matches(
         {'foo': 200}, {'foo': None}, sync=True, keep_none=False
     ) == 1
     assert 'foo' not in collection['4']
 
 
 def test_find_and_replace():
-    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 0
+    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -593,11 +593,11 @@ def test_find_and_replace():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.find_and_replace({'foo': 200}, {'bar': 100}) == 1
+    assert collection.replace_matches({'foo': 200}, {'bar': 100}) == 1
     assert 'foo' not in collection['4']
     assert collection['4']['bar'] == 100
 
-    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 3
+    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert 'foo' not in collection[key]
         assert collection[key]['bar'] == 100

@@ -129,7 +129,7 @@ class SimpleQueriesTest(unittest.TestCase):
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.find_and_update({"value": 1}, {"value": 2})
+        self.col.update_matches({"value": 1}, {"value": 2})
         docs = strip_system_keys(self.col.all())
         self.assertIn({"name": "test_doc_01", "value": 2}, docs)
         self.assertIn({"name": "test_doc_02", "value": 2}, docs)
@@ -141,7 +141,7 @@ class SimpleQueriesTest(unittest.TestCase):
             {"name": "test_doc_02", "value": 1},
             {"name": "test_doc_03", "value": 3}
         ])
-        self.col.find_and_replace({"value": 1}, {"foo": "bar"})
+        self.col.replace_matches({"value": 1}, {"foo": "bar"})
 
         docs = strip_system_keys(self.col.all())
         self.assertIn({"foo": "bar"}, docs)

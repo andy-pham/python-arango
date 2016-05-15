@@ -26,7 +26,7 @@ class Response(object):
         'headers',
         'status_code',
         'status_text',
-        'text',
+        'raw_body',
         'body'
     )
 
@@ -36,7 +36,7 @@ class Response(object):
         self.headers = headers
         self.status_code = status_code
         self.status_text = status_text
-        self.text = body
+        self.raw_body = body
         try:
             self.body = json.loads(body)
         except ValueError:

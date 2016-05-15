@@ -2,16 +2,17 @@ from __future__ import absolute_import, unicode_literals
 
 from collections import Mapping, Iterable
 
-def generate_db_name(driver):
+
+def generate_db_name(conn):
     """Generate and return the next available database name.
 
-    :param driver: ArangoDB driver object
-    :type driver: arango.Arango
+    :param conn: ArangoDB connection
+    :type conn: arango.connection.Connection
     :returns: the next available database name
     :rtype: str
     """
     num = 0
-    existing = set(driver.list_databases())
+    existing = set(conn.list_databases())
     while "test_database_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_database_{num:03d}".format(num=num)
@@ -21,7 +22,7 @@ def generate_col_name(database):
     """Generate and return the next available collection name.
 
     :param database: ArangoDB database
-    :type database: arango.Arango or arango.database.ArangoDatabase
+    :type database: arango.database.ArangoDatabase
     :returns: the next available collection name
     :rtype: str
     """
@@ -36,7 +37,7 @@ def generate_graph_name(database):
     """Generate and return the next available collection name.
 
     :param database: ArangoDB database
-    :type database: arango.Arango or arango.database.ArangoDatabase
+    :type database: arango.database.ArangoDatabase
     :returns: the next available graph name
     :rtype: str
     """
@@ -47,31 +48,31 @@ def generate_graph_name(database):
     return "test_graph_{num:03d}".format(num=num)
 
 
-def generate_task_name(driver):
+def generate_task_name(conn):
     """Generate and return the next available task name.
 
-    :param driver: ArangoDB driver
-    :type driver: arango.Arango or arango.database.ArangoDatabase
-    :returns: the next available user name
+    :param conn: ArangoDB connection
+    :type conn: arango.connection.Connection
+    :returns: the next available database name
     :rtype: str
     """
     num = 0
-    existing = set(task['name'] for task in driver.get_tasks().values())
+    existing = set(task['name'] for task in conn.list_tasks().values())
     while "test_task_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_task_{num:03d}".format(num=num)
 
 
-def generate_user_name(driver):
+def generate_user_name(conn):
     """Generate and return the next available user name.
 
-    :param driver: ArangoDB driver
-    :type driver: arango.Arango or arango.database.ArangoDatabase
-    :returns: the next available user name
+    :param conn: ArangoDB connection
+    :type conn: arango.connection.Connection
+    :returns: the next available database name
     :rtype: str
     """
     num = 0
-    existing = set(driver.list_users())
+    existing = set(conn.list_users())
     while "test_user_{num:03d}".format(num=num) in existing:
         num += 1
     return "test_user_{num:03d}".format(num=num)
@@ -91,10 +92,7 @@ def clean_keys(obj):
             if not (k != '_key' and k.startswith("_"))
         }
     elif isinstance(obj, Iterable):
-        return [
-            {
-                k: v for k, v in document.items()
-                if not (k != '_key' and k.startswith("_"))
-            }
-            for document in obj
-        ]
+        return [{
+            k: v for k, v in document.items()
+            if not (k != '_key' and k.startswith("_"))
+        } for document in obj]

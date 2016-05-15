@@ -13,7 +13,7 @@ class DefaultHTTPClient(BaseHTTPClient):
         """Initialize the session."""
         self.session = Session()
 
-    def head(self, url, params=None, headers=None, auth=None):
+    def head(self, url, params=None, headers=None, auth=None, **kwargs):
         """HTTP HEAD method.
 
         :param url: request URL
@@ -42,7 +42,7 @@ class DefaultHTTPClient(BaseHTTPClient):
             body=res.text
         )
 
-    def get(self, url, params=None, headers=None, auth=None):
+    def get(self, url, params=None, headers=None, auth=None, **kwargs):
         """HTTP GET method.
 
         :param url: request URL
@@ -71,7 +71,7 @@ class DefaultHTTPClient(BaseHTTPClient):
             body=res.text
         )
 
-    def put(self, url, data=None, params=None, headers=None, auth=None):
+    def put(self, url, data, params=None, headers=None, auth=None, **kwargs):
         """HTTP PUT method.
 
         :param url: request URL
@@ -103,7 +103,7 @@ class DefaultHTTPClient(BaseHTTPClient):
             body=res.text
         )
 
-    def post(self, url, data=None, params=None, headers=None, auth=None):
+    def post(self, url, data, params=None, headers=None, auth=None, **kwargs):
         """HTTP POST method.
 
         :param url: request URL
@@ -135,7 +135,7 @@ class DefaultHTTPClient(BaseHTTPClient):
             body=res.text
         )
 
-    def patch(self, url, data=None, params=None, headers=None, auth=None):
+    def patch(self, url, data, params=None, headers=None, auth=None, **kwargs):
         """HTTP PATCH method.
 
         :param url: request URL
@@ -167,7 +167,7 @@ class DefaultHTTPClient(BaseHTTPClient):
             body=res.text
         )
 
-    def delete(self, url, params=None, headers=None, auth=None):
+    def delete(self, url, params=None, headers=None, auth=None, **kwargs):
         """HTTP DELETE method.
 
         :param url: request URL

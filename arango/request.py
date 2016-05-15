@@ -16,10 +16,24 @@ class Request(object):
         self.params = params
         self.data = data
 
-    def __str__(self):
+    def __repr__(self):
+        return "<ArangoDB API request '{} {}'>".format(
+            self.method.upper(), self.endpoint
+        )
+
+    @property
+    def kwargs(self):
+        return {
+            'endpoint': self.endpoint,
+            'headers': self.headers,
+            'params': self.params,
+            'data': self.data,
+        }
+
+    def stringify(self):
         path = self.endpoint
         if self.params is not None:
-            path += "?" + moves.urllib.urlencode(self.params)
+            path += "?" + moves.urllib.parse.urlencode(self.params)
         request_string = "{} {} HTTP/1.1".format(self.method, path)
         if self.headers:
             for key, value in self.headers.items():
@@ -29,18 +43,3 @@ class Request(object):
         if self.data:
             request_string += "\r\n\r\n{}".format(dumps(self.data))
         return request_string
-
-    @property
-    def args(self):
-        if self.method in {'put', 'post', 'patch'}:
-            return {
-                'endpoint': self.endpoint,
-                'data': self.data,
-                'headers': self.headers,
-                'params': self.params,
-            }
-        return {
-            'endpoint': self.endpoint,
-            'headers': self.headers,
-            'params': self.params
-        }

@@ -6,8 +6,7 @@ from datetime import datetime
 import pytest
 from six import string_types
 
-from arango import Arango
-from arango.constants import DEFAULT_DB
+from arango.connection import Connection
 from arango.database import Database
 from arango.exceptions import *
 from arango.tests.utils import (
@@ -15,64 +14,63 @@ from arango.tests.utils import (
     generate_user_name,
     generate_task_name
 )
-from arango.version import VERSION
 
 
 def setup_module(*_):
-    global driver, db_name, username, task_name, task_id
+    global conn, db_name, username, task_name, task_id
 
-    driver = Arango()
-    db_name = generate_db_name(driver)
-    username = generate_user_name(driver)
-    task_name = generate_task_name(driver)
+    conn = Connection()
+    db_name = generate_db_name(conn)
+    username = generate_user_name(conn)
+    task_name = generate_task_name(conn)
     task_id = ''
 
 
 def teardown_module(*_):
-    driver.drop_database(db_name, ignore_missing=True)
-    driver.delete_user(username, ignore_missing=True)
-    driver.delete_task(task_id, ignore_missing=True)
+    conn.drop_database(db_name, ignore_missing=True)
+    conn.delete_user(username, ignore_missing=True)
+    if task_id:
+        conn.delete_task(task_id, ignore_missing=True)
 
 
 def test_properties():
-    assert driver.protocol == 'http'
-    assert driver.host == 'localhost'
-    assert driver.port == 8529
-    assert driver.version == VERSION
-    assert 'ArangoDB API driver' in repr(driver)
+    assert conn.protocol == 'http'
+    assert conn.host == 'localhost'
+    assert conn.port == 8529
+    assert 'ArangoDB connection at' in repr(conn)
 
 
-def test_server_version():
-    version = driver.server_version()
+def test_version():
+    version = conn.version()
     assert isinstance(version, string_types)
 
 
-def test_server_details():
-    details = driver.server_details()
+def test_details():
+    details = conn.details()
     assert 'architecture' in details
     assert 'server-version' in details
 
 
-def test_target_version():
-    version = driver.required_db_version()
+def test_required_db_version():
+    version = conn.required_db_version()
     assert isinstance(version, string_types)
 
 
-def test_server_statistics():
-    statistics = driver.server_statistics(description=False)
+def test_statistics():
+    statistics = conn.statistics(description=False)
     assert isinstance(statistics, dict)
     assert 'time' in statistics
     assert 'system' in statistics
     assert 'server' in statistics
 
-    description = driver.server_statistics(description=True)
+    description = conn.statistics(description=True)
     assert isinstance(description, dict)
     assert 'figures' in description
     assert 'groups' in description
 
 
-def test_server_role():
-    assert driver.server_role() in {
+def test_role():
+    assert conn.role() in {
         'SINGLE',
         'COORDINATOR',
         'PRIMARY',
@@ -81,13 +79,13 @@ def test_server_role():
     }
 
 
-def test_server_time():
-    system_time = driver.server_time()
+def test_time():
+    system_time = conn.time()
     assert isinstance(system_time, datetime)
 
 
 def test_echo():
-    last_request = driver.last_request()
+    last_request = conn.echo()
     assert 'protocol' in last_request
     assert 'user' in last_request
     assert 'requestType' in last_request
@@ -95,29 +93,28 @@ def test_echo():
 
 
 def test_sleep():
-    assert driver.sleep(1) == 1
-    assert driver.sleep(2) == 2
+    assert conn.sleep(2) == 2
 
 
 # def test_shutdown():
-#     assert isinstance(driver.shutdown(), bool)
+#     assert isinstance(conn.shutdown(), bool)
 
 
 # def test_run_tests():
-#     assert isinstance(driver.run_tests, dict)
+#     assert isinstance(conn.run_tests, dict)
 
 
-def test_run_program():
-    assert driver.run_program('return 1') == '1'
-    assert driver.run_program('return "test"') == '"test"'
+def test_execute():
+    assert conn.execute('return 1') == '1'
+    assert conn.execute('return "test"') == '"test"'
     with pytest.raises(ProgramExecuteError) as err:
-        driver.run_program('return invalid')
+        conn.execute('return invalid')
     assert err.value.message == 'Internal Server Error'
 
 
 # TODO test parameters
-def test_read_log():
-    log = driver.read_log()
+def test_log():
+    log = conn.read_log()
     assert 'lid' in log
     assert 'level' in log
     assert 'text' in log
@@ -125,108 +122,62 @@ def test_read_log():
 
 
 def test_reload_routing():
-    result = driver.reload_routing()
+    result = conn.reload_routing()
     assert isinstance(result, bool)
 
 
 def test_endpoints():
-    endpoints = driver.endpoints()
+    endpoints = conn.endpoints()
     assert isinstance(endpoints, list)
     for endpoint in endpoints:
         assert 'databases' in endpoint
         assert 'endpoint' in endpoint
 
 
-# TODO something wrong here
-def test_list_databases():
-    result = driver.list_databases()
-    assert DEFAULT_DB in result
+def test_database_management():
+    # Test list databases
+    # TODO something wrong here
+    result = conn.list_databases()
+    assert '_system' in result
 
-    result = driver.list_databases(user_only=True)
-    assert DEFAULT_DB in result
+    result = conn.list_databases(user_only=True)
+    assert '_system' in result
 
-
-def test_get_database():
-    db = driver.db(DEFAULT_DB)
-    assert isinstance(db, Database)
-    assert db.name == DEFAULT_DB
-
-
-def test_database_mgnt():
-    assert db_name not in driver.list_databases()
+    assert db_name not in conn.list_databases()
 
     # Test create database
-    db = driver.create_database(db_name)
-    assert db_name in driver.list_databases()
-    assert isinstance(db, Database)
-    assert db.name == db_name
+    result = conn.create_database(db_name)
+    assert isinstance(result, Database)
+    assert db_name in conn.list_databases()
 
     # Test get after create database
-    db = driver.db(db_name)
-    assert isinstance(db, Database)
-    assert db.name == db_name
+    assert isinstance(conn.db(db_name), Database)
+    assert conn.db(db_name).name == db_name
 
     # Test create duplicate database
     with pytest.raises(DatabaseCreateError):
-        driver.create_database(db_name)
+        conn.create_database(db_name)
 
     # Test list after create database
-    assert db_name in driver.list_databases()
+    assert db_name in conn.list_databases()
 
     # Test drop database
-    result = driver.drop_database(db_name)
+    result = conn.drop_database(db_name)
     assert result is True
-    assert db_name not in driver.list_databases()
+    assert db_name not in conn.list_databases()
 
     # Test drop missing database
     with pytest.raises(DatabaseDeleteError):
-        driver.drop_database(db_name)
+        conn.drop_database(db_name)
 
     # Test drop missing database (ignore missing)
-    result = driver.drop_database(db_name, ignore_missing=True)
+    result = conn.drop_database(db_name, ignore_missing=True)
     assert result is False
-
-
-def test_wal_options():
-    options = driver.wal_options()
-    assert 'oversized_ops' in options
-    assert 'log_size' in options
-    assert 'historic_logs' in options
-    assert 'reserve_logs' in options
-
-
-def test_set_wal_options():
-    driver.set_wal_options(
-        historic_logs=15,
-        oversized_ops=False,
-        log_size=30000000,
-        reserve_logs=5,
-        throttle_limit=1000,
-        throttle_wait=16000
-    )
-    options = driver.wal_options()
-    assert options['historic_logs'] == 15
-    assert options['oversized_ops'] is False
-    assert options['log_size'] == 30000000
-    assert options['reserve_logs'] == 5
-    assert options['throttle_limit'] == 1000
-    assert options['throttle_wait'] == 16000
-
-
-def test_flush_wal():
-    assert isinstance(driver.flush_wal(), bool)
-
-
-def test_wal_transactions():
-    result = driver.wal_transactions()
-    assert 'count' in result
-    assert 'last_sealed' in result
-    assert 'last_collected' in result
 
 
 def test_user_management():
     # Test get users
-    users = driver.list_users()
+    users = conn.list_users()
     assert isinstance(users, dict)
     assert 'root' in users
 
@@ -235,10 +186,10 @@ def test_user_management():
     assert 'extra'in root_user
     assert 'change_password' in root_user
 
-    assert username not in driver.list_users()
+    assert username not in conn.list_users()
 
     # Test create user
-    user = driver.create_user(
+    user = conn.create_user(
         username,
         'password',
         active=True,
@@ -248,16 +199,16 @@ def test_user_management():
     assert user['active'] is True
     assert user['extra'] == {'hello': 'world'}
     assert user['change_password'] is False
-    assert username in driver.list_users()
+    assert username in conn.list_users()
 
     # Test create duplicate user
     with pytest.raises(UserCreateError):
-        driver.create_user(username, 'password')
+        conn.create_user(username, 'password')
 
-    missing = generate_user_name(driver)
+    missing = generate_user_name(conn)
 
     # Test update user
-    user = driver.update_user(
+    user = conn.update_user(
         username,
         password='test',
         active=False,
@@ -273,7 +224,7 @@ def test_user_management():
 
     # Test update missing user
     with pytest.raises(UserUpdateError):
-        driver.update_user(
+        conn.update_user(
             missing,
             password='test',
             active=False,
@@ -282,7 +233,7 @@ def test_user_management():
         )
 
     # Test replace user
-    user = driver.replace_user(
+    user = conn.replace_user(
         username,
         password='test',
         active=True,
@@ -295,7 +246,7 @@ def test_user_management():
 
     # Test replace missing user
     with pytest.raises(UserReplaceError):
-        driver.replace_user(
+        conn.replace_user(
             missing,
             password='test',
             active=True,
@@ -304,16 +255,16 @@ def test_user_management():
         )
 
     # Test delete user
-    result = driver.delete_user(username)
+    result = conn.delete_user(username)
     assert result is True
-    assert username not in driver.list_users()
+    assert username not in conn.list_users()
 
     # Test delete missing user
     with pytest.raises(UserDeleteError):
-        driver.delete_user(username)
+        conn.delete_user(username)
 
     # Test delete missing user (ignore missing)
-    result = driver.delete_user(username, ignore_missing=True)
+    result = conn.delete_user(username, ignore_missing=True)
     assert result is False
 
 
@@ -321,7 +272,7 @@ def test_task_management():
     global task_id
 
     # Test get tasks
-    tasks = driver.get_tasks()
+    tasks = conn.list_tasks()
     assert isinstance(tasks, dict)
     for task in tasks.values():
         assert 'command' in task
@@ -331,17 +282,17 @@ def test_task_management():
         assert 'name' in task
 
     # Test get task
-    tasks = driver.get_tasks()
+    tasks = conn.list_tasks()
     if tasks:
-        chosen_task_id = random.choice(tasks.keys())
-        retrieved_task = driver.get_task(chosen_task_id)
+        chosen_task_id = random.choice(list(tasks.keys()))
+        retrieved_task = conn.get_task(chosen_task_id)
         assert tasks[chosen_task_id] == retrieved_task
 
     cmd = "(function(params) { require('internal').print(params); })(params)"
 
     # Test create task
-    assert task_name not in driver.get_tasks()
-    task = driver.create_task(
+    assert task_name not in conn.list_tasks()
+    task = conn.create_task(
         name=task_name,
         command=cmd,
         params={'foo': 'bar', 'bar': 'foo'},
@@ -349,18 +300,18 @@ def test_task_management():
         offset=3,
     )
     task_id = task['id']
-    assert task_id in driver.get_tasks()
-    assert task_name == driver.get_tasks()[task_id]['name']
+    assert task_id in conn.list_tasks()
+    assert task_name == conn.list_tasks()[task_id]['name']
 
     # Test get after create task
-    task = driver.get_task(task_id)
+    task = conn.get_task(task_id)
     assert task['command'] == cmd
     assert task['name'] == task_name
     assert task['period'] == 2
 
     # Test create duplicate task (with ID)
     with pytest.raises(TaskCreateError):
-        task = driver.create_task(
+        task = conn.create_task(
             task_id=task_id,
             name=task_name,
             command=cmd,
@@ -370,20 +321,20 @@ def test_task_management():
         )
 
     # Test delete task
-    result = driver.delete_task(task['id'])
+    result = conn.delete_task(task['id'])
     assert result is True
-    assert task_id not in driver.get_tasks()
+    assert task_id not in conn.list_tasks()
 
     # Test delete missing task
     with pytest.raises(TaskDeleteError):
-        driver.delete_task(task['id'])
+        conn.delete_task(task['id'])
 
     # Test delete missing task (ignore missing)
-    result = driver.delete_task(task['id'], ignore_missing=True)
+    result = conn.delete_task(task['id'], ignore_missing=True)
     assert result is False
 
     # Test create task with ID
-    task = driver.create_task(
+    task = conn.create_task(
         task_id=task_id,
         name=task_name,
         command=cmd,
@@ -397,7 +348,7 @@ def test_task_management():
     assert task['period'] == 3
 
     # Test get after create task with ID
-    task = driver.get_task(task_id)
+    task = conn.get_task(task_id)
     assert task['id'] == task_id
     assert task['command'] == cmd
     assert task['name'] == task_name

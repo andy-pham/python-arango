@@ -4,7 +4,7 @@ import unittest
 
 from arango import Arango
 from arango.exceptions import (
-    AQLQueryValidateError,
+    QueryValidateError,
 )
 from arango.tests_old.utils import (
     generate_col_name,
@@ -28,8 +28,8 @@ class ArangoDBQueryTest(unittest.TestCase):
 
     def test_explain_query(self):
         self.assertRaises(
-            AQLQueryValidateError,
-            self.db.validate_query,
+            QueryValidateError,
+            self.db.validate,
             "THIS IS AN INVALID QUERY"
         )
         plans = self.db.explain_query(
@@ -52,13 +52,13 @@ class ArangoDBQueryTest(unittest.TestCase):
 
     def test_validate_query(self):
         self.assertRaises(
-            AQLQueryValidateError,
-            self.db.validate_query,
+            QueryValidateError,
+            self.db.validate,
             "THIS IS AN INVALID QUERY"
         )
         self.assertEqual(
             None,
-            self.db.validate_query(
+            self.db.validate(
                 "FOR d IN {} RETURN d".format(self.col_name)
             ),
         )
@@ -70,7 +70,7 @@ class ArangoDBQueryTest(unittest.TestCase):
             {"_key": "doc02"},
             {"_key": "doc03"},
         ])
-        res = self.db.execute_query(
+        res = self.db.execute(
             "FOR d IN {} RETURN d".format(self.col_name),
             count=True,
             batch_size=1,
@@ -89,7 +89,7 @@ class ArangoDBQueryTest(unittest.TestCase):
             {"_key": "doc02", "value": 2},
             {"_key": "doc03", "value": 3},
         ])
-        res = self.db.execute_query(
+        res = self.db.execute(
             "FOR d IN {} FILTER d.value == @value RETURN d".format(
                 self.col_name
             ),
