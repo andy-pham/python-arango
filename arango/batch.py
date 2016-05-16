@@ -1,30 +1,30 @@
 from __future__ import absolute_import, unicode_literals
 
-from arango.collection import (
-    Collection,
-    EdgeCollection
-)
+from arango.collection import Collection
 from arango.graph import Graph
 from arango.constants import HTTP_OK
-from arango.exceptions import (
-    BatchExecuteError,
-    ArangoError
-)
+from arango.exceptions import BatchExecuteError
 from arango.response import Response
 
 
 class Batch(object):
+    """ArangoDB batch query object.
 
-    def __init__(self, connection):
+    :param connection: ArangoDB connection object
+    :type connection: arango.connection.Connection
+    """
+
+    def __init__(self, connection, return_result=True):
         self._conn = connection
         self._requests = []
         self._handlers = []
-        self.type = 'batch'
+        self._type = 'batch'
+        self._return = return_result
 
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, *_):
         return self.commit()
 
     def __repr__(self):
@@ -32,11 +32,34 @@ class Batch(object):
             len(self._requests)
         )
 
+    @property
+    def type(self):
+        return self._type
+
     def add(self, request, handler):
+        """Add a request to the batch query.
+
+        This method should only be called internally.
+
+        :param request: the ArangoDB request object
+        :type request: arango.request.Request
+        :param handler: the handler function
+        :type handler: callable
+        :return:
+        """
         self._requests.append(request)
         self._handlers.append(handler)
 
     def commit(self):
+        """Execute the batch query in call.
+
+        If ``return_response`` was is to True, the responses are returned in
+        the same order as the requests added.
+
+        :returns: the result
+        :rtype: list | None
+        :raises: BatchExecuteError
+        """
         try:
             if not self._requests:
                 return []
@@ -59,9 +82,10 @@ class Batch(object):
             )
             if res.status_code not in HTTP_OK:
                 raise BatchExecuteError(res)
-
-            url_prefix = self._conn.url_prefix
+            if not self._return:
+                return
             responses = []
+            url_prefix = self._conn.url_prefix
             # TODO do something about this ugly ass parsing
             for index, raw_res in enumerate(
                 res.raw_body.split('--XXXsubpartXXX')[1:-1]
@@ -81,7 +105,7 @@ class Batch(object):
                         status_text=status_text,
                         body=raw_body
                     ))
-                except ArangoError as err:
+                except Exception as err:
                     responses.append(err)
                 else:
                     responses.append(result)
@@ -89,27 +113,18 @@ class Batch(object):
         finally:
             self._requests, self._handlers = [], []
 
-    def collection(self, name):
+    def collection(self, name, edge=False):
         """Return the Collection object of the specified name.
 
         :param name: the name of the collection
         :type name: str
+        :param edge: whether this collection is an edge collection
+        :type edge: bool
         :returns: the requested collection object
         :rtype: arango.collection.Collection
         :raises: TypeError
         """
-        return Collection(self, name)
-
-    def edge_collection(self, name):
-        """Return the EdgeCollection object of the specified name.
-
-        :param name: the name of the edge collection
-        :type name: str
-        :returns: the requested edge collection object
-        :rtype: arango.collection.EdgeCollection
-        :raises: TypeError
-        """
-        return EdgeCollection(self, name)
+        return Collection(self, name, edge)
 
     def graph(self, name):
         """Return the Graph object of the specified name.

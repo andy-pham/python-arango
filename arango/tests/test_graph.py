@@ -469,8 +469,8 @@ def test_all():
         assert {'_key': doc['_key'], 'foo': doc['foo']} in inserted
 
     # TODO ordering is strange
-    assert len(list(collection.all(skip=5))) == 0
-    fetched = list(collection.all(skip=3))
+    assert len(list(collection.all(offset=5))) == 0
+    fetched = list(collection.all(offset=3))
     assert len(fetched) == 2
 
     # TODO ordering is strange
@@ -534,7 +534,7 @@ def test_find_many():
         assert doc['_key'] in ['1', '2', '3']
         assert {'_key': doc['_key'], 'foo': doc['foo']} in inserted
 
-    found = list(collection.find_many({'foo': 100}, skip=1))
+    found = list(collection.find_many({'foo': 100}, offset=1))
     assert len(found) == 2
     for doc in found:
         assert doc['_key'] in ['1', '2', '3']
@@ -552,7 +552,7 @@ def test_find_many():
 
 
 def test_find_and_update():
-    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 0
+    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -561,11 +561,11 @@ def test_find_and_update():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.update_matches({'foo': 200}, {'bar': 100}) == 1
+    assert collection.find_and_update({'foo': 200}, {'bar': 100}) == 1
     assert collection['4']['foo'] == 200
     assert collection['4']['bar'] == 100
 
-    assert collection.update_matches({'foo': 100}, {'bar': 100}) == 3
+    assert collection.find_and_update({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert collection[key]['foo'] == 100
         assert collection[key]['bar'] == 100
@@ -573,18 +573,18 @@ def test_find_and_update():
     assert collection['5']['foo'] == 300
     assert 'bar' not in collection['5']
 
-    assert collection.update_matches(
+    assert collection.find_and_update(
         {'foo': 300}, {'foo': None}, sync=True, keep_none=True
     ) == 1
     assert collection['5']['foo'] is None
-    assert collection.update_matches(
+    assert collection.find_and_update(
         {'foo': 200}, {'foo': None}, sync=True, keep_none=False
     ) == 1
     assert 'foo' not in collection['4']
 
 
 def test_find_and_replace():
-    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 0
+    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 0
     collection.insert_many([
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -593,11 +593,11 @@ def test_find_and_replace():
         {'_key': '5', 'foo': 300},
     ])
 
-    assert collection.replace_matches({'foo': 200}, {'bar': 100}) == 1
+    assert collection.find_and_replace({'foo': 200}, {'bar': 100}) == 1
     assert 'foo' not in collection['4']
     assert collection['4']['bar'] == 100
 
-    assert collection.replace_matches({'foo': 100}, {'bar': 100}) == 3
+    assert collection.find_and_replace({'foo': 100}, {'bar': 100}) == 3
     for key in ['1', '2', '3']:
         assert 'foo' not in collection[key]
         assert collection[key]['bar'] == 100
@@ -675,7 +675,7 @@ def test_find_in_range():
         field='value',
         lower=2,
         upper=5,
-        skip=1,
+        offset=1,
         limit=2,
     )
     expected = [

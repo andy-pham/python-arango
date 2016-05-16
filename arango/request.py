@@ -17,7 +17,7 @@ class Request(object):
         self.data = data
 
     def __repr__(self):
-        return "<ArangoDB API request '{} {}'>".format(
+        return "<ArangoDB request '{} {}'>".format(
             self.method.upper(), self.endpoint
         )
 

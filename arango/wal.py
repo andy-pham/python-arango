@@ -10,18 +10,16 @@ from arango.exceptions import (
 
 
 class WriteAheadLog(object):
-    """ArangoDB write-ahead log."""
+    """ArangoDB write-ahead log object.
+
+    :param connection: ArangoDB API connection object
+    :type connection: arango.connection.Connection
+    """
 
     def __init__(self, connection):
-        """Initialize the wrapper object.
-
-        :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
-        """
         self._conn = connection
 
     def __repr__(self):
-        """Return a descriptive string of this instance."""
         return "<ArangoDB write-ahead log>"
 
     def options(self):
@@ -98,16 +96,13 @@ class WriteAheadLog(object):
 
         Fields in the returned dictionary:
 
-        ``last_collected``:
-            min ID of the last collected log file (at the start of
-            running transaction). None if no transaction is running.
+        ``last_collected``: ID of the last collected log file (at the start of
+        running transaction). None if no transaction is running.
 
-        ``last_sealed``:
-            min ID of the last sealed log file (at the start of each
-            running transaction). None if no transaction is running.
+        ``last_sealed``: ID of the last sealed log file (at the start of each
+        running transaction). None if no transaction is running.
 
-        ``count``:
-            the number of current running transactions
+        ``count``: the number of current running transactions
 
         :returns: the information about the currently running transactions
         :rtype: dict

@@ -1,7 +1,5 @@
 from __future__ import absolute_import, unicode_literals
 
-from functools import wraps
-
 import json
 
 from arango.cursor import Cursor
@@ -11,36 +9,40 @@ from arango.constants import (
 )
 from arango.exceptions import *
 from arango.request import Request
+from arango.wrapper import APIWrapper
 
-_getattr = object.__getattribute__
 
-
-class Collection(object):
+class Collection(APIWrapper):
     """Wrapper for ArangoDB's collection-specific APIs.
 
-    1. Document Management
-    2. Simple Queries
-    3. Index Management
+    :param connection: ArangoDB API connection object
+    :type connection: arango.connection.Connection | arango.batch.Batch
+    :param name: the name of this collection
+    :type name: str
     """
 
-    def __init__(self, connection, name):
-        """Initialize the wrapper object.
-
-        :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
-        :param name: the name of this collection
-        :type name: str
-        """
+    def __init__(self, connection, name, edge=False):
         self._conn = connection
         self._name = name
+        self._type = 'edge' if edge else 'document'
 
     def __repr__(self):
-        """Return a descriptive string of this instance."""
-        return "<ArangoDB collection '{}'>".format(self._name)
+        return "<ArangoDB {} collection '{}'>".format(self._type, self._name)
 
     def __iter__(self):
-        """Iterate through the documents in this collection."""
-        return self.all()
+        """Iterate through the documents in this collection.
+
+        :returns: the document cursor
+        :rtype: arango.cursor.Cursor
+        :raises: DocumentGetAllError
+        """
+        res = self._conn.put(
+            endpoint='/_api/simple/all',
+            data={'collection': self._name}
+        )
+        if res.status_code not in HTTP_OK:
+            raise DocumentGetAllError(res)
+        return Cursor(self._conn, res)
 
     def __len__(self):
         """Return the number of documents in this collection.
@@ -62,7 +64,16 @@ class Collection(object):
         :returns: the requested document
         :rtype: dict
         """
-        return self.get_one(key)
+        res = self._conn.get(
+            '/_api/{}/{}/{}'.format(self._type, self._name, key)
+        )
+        if res.status_code in {412, 304}:
+            raise DocumentRevisionError(res)
+        elif res.status_code == 404:
+            return None
+        elif res.status_code not in HTTP_OK:
+            raise DocumentGetError(res)
+        return res.body
 
     def __contains__(self, key):
         """Return True if the document exists in this collection.
@@ -74,7 +85,7 @@ class Collection(object):
         :raises: DocumentGetError
         """
         res = self._conn.head(
-            '/_api/document/{}/{}'.format(self._name, key)
+            '/_api/{}/{}/{}'.format(self._type, self._name, key)
         )
         if res.status_code == 200:
             return True
@@ -82,31 +93,32 @@ class Collection(object):
             return False
         raise DocumentGetError(res)
 
-    def __getattribute__(self, attr):
-        conn = _getattr(self, '_conn')
-        if conn.type == 'normal':
-            if attr.startswith('_') or attr in {'name', 'rename'}:
-                return _getattr(self, attr)
-            method = _getattr(self, attr)
+    def _validate(self, document):
+        """Validate the document for correctness.
 
-            @wraps(method)
-            def wrapped_method(*args, **kwargs):
-                req, handler = method(*args, **kwargs)
-                res = getattr(conn, req.method)(**req.kwargs)
-                return handler(res)
-            return wrapped_method
+        :param document: the document to validate
+        :type document: dict
+        :raises: ValueError
+        """
+        if self._type == 'edge':
+            if '_from' not in document:
+                raise ValueError("'_from' field missing in the edge document")
+            if '_to' not in document:
+                raise ValueError("'_to' field missing in the edge document")
+        return document
 
-        elif conn.type == 'batch':
-            if attr.startswith('_') and attr in {'name', 'rename'}:
-                return _getattr(self, attr)
-            method = _getattr(self, attr)
+    def _edge_params(self, document, params):
+        """Populate the request parameters with '_from' and '_to' fields.
 
-            @wraps(method)
-            def wrapped_method(*args, **kwargs):
-                req, handler = method(*args, **kwargs)
-                conn.add(req, handler)
-                return True
-            return wrapped_method
+        :param document: the document
+        :type document: dict
+        :param params: the request parameters
+        :type params: dict
+        """
+        if self._type == 'edge':
+            self._validate(document)
+            params['from'] = document['_from']
+            params['to'] = document['_to']
 
     @staticmethod
     def _status(code):
@@ -139,14 +151,19 @@ class Collection(object):
         :rtype: bool
         :raises: CollectionRenameError
         """
-        res = self._conn.put(
+        request = Request(
+            method='put',
             endpoint='/_api/collection/{}/rename'.format(self._name),
             data={'name': new_name}
         )
-        if res.status_code not in HTTP_OK:
-            raise CollectionRenameError(res)
-        self._name = new_name
-        return True
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise CollectionRenameError(res)
+            self._name = new_name
+            return True
+
+        return request, handler
 
     def statistics(self):
         """Return the statistics of this collection.
@@ -172,6 +189,7 @@ class Collection(object):
                 'uncollectedLogfileEntries', None
             )
             return stats
+
         return request, handler
 
     def revision(self):
@@ -190,6 +208,7 @@ class Collection(object):
             if res.status_code not in HTTP_OK:
                 raise CollectionGetRevisionError(res)
             return res.body['revision']
+
         return request, handler
 
     def options(self):
@@ -225,6 +244,7 @@ class Collection(object):
             if 'offset' in res.body['keyOptions']:
                 result['key_offset'] = res.body['keyOptions']['offset']
             return result
+
         return request, handler
 
     def set_options(self, sync=None, journal_size=None):
@@ -353,6 +373,48 @@ class Collection(object):
     # Document Management #
     #######################
 
+    def count(self):
+        """Return the number of documents in this collection.
+
+        :returns: the number of documents
+        :rtype: int
+        :raises: CollectionGetCountError
+        """
+        request = Request(
+            method='get',
+            endpoint='/_api/collection/{}/count'.format(self._name)
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise CollectionGetCountError(res)
+            return res.body['count']
+
+        return request, handler
+
+    def has(self, key):
+        """Return True if the document exists in this collection.
+
+        :param key: the document key
+        :type key: str
+        :returns: True if the document exists, else False
+        :rtype: bool
+        :raises: DocumentGetError
+        """
+        request = Request(
+            method='head',
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
+        )
+
+        def handler(res):
+            if res.status_code == 200:
+                return True
+            elif res.status_code == 404:
+                return False
+            raise DocumentGetError(res)
+
+        return request, handler
+
     def insert_one(self, document, sync=False):
         """Insert a new document into this collection.
 
@@ -371,14 +433,16 @@ class Collection(object):
             DocumentInvalidError,
             CollectionNotFoundError
         """
+        params = {
+            'collection': self._name,
+            'waitForSync': sync,
+        }
+        self._edge_params(document, params)
         request = Request(
             method='post',
-            endpoint='/_api/document',
-            data=document,
-            params={
-                'collection': self._name,
-                'waitForSync': sync,
-            }
+            endpoint='/_api/{}'.format(self._type),
+            data=self._validate(document),
+            params=params
         )
 
         def handler(res):
@@ -416,7 +480,10 @@ class Collection(object):
         request = Request(
             method='post',
             endpoint='/_api/import',
-            data='\r\n'.join([json.dumps(d) for d in documents]),
+            data='\r\n'.join([
+                json.dumps(self._validate(document))
+                for document in documents
+            ]),
             params={
                 'type': 'documents',
                 'collection': self._name,
@@ -452,7 +519,7 @@ class Collection(object):
         """
         request = Request(
             method='get',
-            endpoint='/_api/document/{}/{}'.format(self._name, key),
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
             headers={
                 'If-Match' if match else 'If-None-Match': revision
             } if revision else {}
@@ -513,13 +580,13 @@ class Collection(object):
             return res.body['document']
         return request, handler
 
-    def find_many(self, filters, skip=None, limit=None):
+    def find_many(self, filters, offset=None, limit=None):
         """Return all documents matching the given example document body.
 
         :param filters: the match filters
         :type filters: dict
-        :param skip: the number of documents to skip
-        :type skip: int
+        :param offset: the number of documents to skip
+        :type offset: int
         :param limit: maximum number of documents to return
         :type limit: int
         :returns: document cursor
@@ -527,8 +594,8 @@ class Collection(object):
         :raises: DocumentFindManyError
         """
         data = {'collection': self._name, 'example': filters}
-        if skip is not None:
-            data['skip'] = skip
+        if offset is not None:
+            data['skip'] = offset
         if limit is not None:
             data['limit'] = limit
 
@@ -590,7 +657,7 @@ class Collection(object):
 
         request = Request(
             method='patch',
-            endpoint='/_api/document/{}/{}'.format(self._name, key),
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
             data=data,
             params=params
         )
@@ -604,8 +671,8 @@ class Collection(object):
             return res.body
         return request, handler
 
-    def update_matches(self, filters, data, limit=None, keep_none=True,
-                       sync=False):
+    def find_and_update(self, filters, data, limit=None, keep_none=True,
+                        sync=False):
         """Update all documents matching the given example document body.
 
         :param filters: the match filter
@@ -678,7 +745,7 @@ class Collection(object):
 
         request = Request(
             method='put',
-            endpoint='/_api/document/{}/{}'.format(self._name, key),
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
             params=params,
             data=data
         )
@@ -693,7 +760,7 @@ class Collection(object):
 
         return request, handler
 
-    def replace_matches(self, filters, data, limit=None, sync=False):
+    def find_and_replace(self, filters, data, limit=None, sync=False):
         """Replace all matching documents.
 
         :param filters: the match filters
@@ -752,7 +819,7 @@ class Collection(object):
 
         request = Request(
             method='delete',
-            endpoint='/_api/document/{}/{}'.format(self._name, key),
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
             params=params
         )
 
@@ -796,7 +863,7 @@ class Collection(object):
 
         return request, handler
 
-    def delete_matches(self, filters, limit=None, sync=False):
+    def find_and_delete(self, filters, limit=None, sync=False):
         """Delete all matching documents from the collection.
 
         :param filters: the match filters
@@ -937,13 +1004,13 @@ class Collection(object):
 
         return request, handler
 
-    def all(self, skip=None, limit=None):
+    def all(self, offset=None, limit=None):
         """Return all documents in this collection.
 
         ``skip`` is applied before ``limit`` if both are provided.
 
-        :param skip: the number of documents to skip
-        :type skip: int
+        :param offset: the number of documents to skip
+        :type offset: int
         :param limit: maximum number of documents to return
         :type limit: int
         :returns: document cursor
@@ -951,8 +1018,8 @@ class Collection(object):
         :raises: DocumentGetAllError
         """
         data = {'collection': self._name}
-        if skip is not None:
-            data['skip'] = skip
+        if offset is not None:
+            data['skip'] = offset
         if limit is not None:
             data['limit'] = limit
 
@@ -1035,7 +1102,7 @@ class Collection(object):
 
         return request, handler
 
-    def find_in_range(self, field, lower, upper, skip=0, limit=100,
+    def find_in_range(self, field, lower, upper, offset=0, limit=100,
                       include=True):
         """Return all documents that are within the given range.
 
@@ -1050,8 +1117,8 @@ class Collection(object):
         :type lower: int
         :param upper: the upper bound
         :type upper: int
-        :param skip: the number of documents to skip
-        :type skip: int | None
+        :param offset: the number of documents to skip
+        :type offset: int | None
         :param limit: the maximum number of documents to return
         :type limit: int | None
         :param include: whether to include the endpoints or not
@@ -1079,7 +1146,7 @@ class Collection(object):
             'field': field,
             'lower': lower,
             'upper': upper,
-            'skip': skip,
+            'skip': offset,
             'limit': limit
         }
 
@@ -1437,29 +1504,3 @@ class Collection(object):
             return res.body
 
         return request, handler
-
-
-class EdgeCollection(Collection):
-
-    def __repr__(self):
-        """Return a descriptive string of this instance."""
-        return "<ArangoDB edge collection '{}'>".format(self._name)
-
-    def __contains__(self, key):
-        """Return True if the document exists in this collection.
-
-        :param key: the document key
-        :type key: str
-        :returns: True if the document exists, else False
-        :rtype: bool
-        :raises: DocumentGetError
-        """
-        res = self._conn.head(
-            '/_api/edge/{}/{}'.format(self._name, key)
-        )
-        if res.status_code == 200:
-            return True
-        elif res.status_code == 404:
-            return False
-        raise DocumentGetError(res)
-

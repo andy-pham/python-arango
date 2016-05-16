@@ -1,15 +1,14 @@
 from __future__ import absolute_import, unicode_literals
 
+import pytest
+
 from arango.connection import Connection
 
-
-def setup_module(*_):
-    global conn, db_name, db, wal, col_name
-
-    conn = Connection()
-    wal = conn.wal
+conn = Connection()
+wal = conn.wal
 
 
+@pytest.mark.order1
 def test_wal_options():
     options = wal.options()
     assert 'oversized_ops' in options
@@ -18,6 +17,7 @@ def test_wal_options():
     assert 'reserve_logs' in options
 
 
+@pytest.mark.order2
 def test_wal_set_options():
     wal.set_options(
         historic_logs=15,
@@ -36,12 +36,14 @@ def test_wal_set_options():
     assert options['throttle_wait'] == 16000
 
 
-def test_flush_wal():
-    assert isinstance(wal.flush(), bool)
-
-
+@pytest.mark.order3
 def test_wal_transactions():
     result = wal.transactions()
     assert 'count' in result
     assert 'last_sealed' in result
     assert 'last_collected' in result
+
+
+@pytest.mark.order4
+def test_flush_wal():
+    assert isinstance(wal.flush(), bool)

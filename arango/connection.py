@@ -41,8 +41,9 @@ class Connection(object):
         self.password = password
         self.verify = verify
         self.client = client or DefaultHTTPClient()
-        self.type = 'normal'
+
         self.wal = WriteAheadLog(self)
+        self._type = 'normal'
         self._registered_db = '_system'
 
         # Verify the server connection
@@ -55,6 +56,10 @@ class Connection(object):
         return "<ArangoDB connection at '{}'>".format(self.url_prefix)
 
     @property
+    def type(self):
+        return self._type
+
+    @property
     def url_prefix(self):
         return '{}://{}:{}/_db/{}'.format(
             self.protocol,
@@ -63,7 +68,7 @@ class Connection(object):
             self._registered_db
         )
 
-    def register_db(self, name):
+    def set_db(self, name):
         """Bind this connection to a specific database.
 
         :param name: the name of the database

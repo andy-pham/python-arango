@@ -15,15 +15,11 @@ from arango.tests.utils import (
     generate_task_name
 )
 
-
-def setup_module(*_):
-    global conn, db_name, username, task_name, task_id
-
-    conn = Connection()
-    db_name = generate_db_name(conn)
-    username = generate_user_name(conn)
-    task_name = generate_task_name(conn)
-    task_id = ''
+conn = Connection()
+db_name = generate_db_name(conn)
+username = generate_user_name(conn)
+task_name = generate_task_name(conn)
+task_id = ''
 
 
 def teardown_module(*_):

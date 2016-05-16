@@ -63,7 +63,7 @@ class GraphManagementTest(unittest.TestCase):
             [orphan_col_name]
         )
         self.assertEqual(
-            graph.list_edge_definitions,
+            graph.edge_definitions,
             [{
                 "collection": edge_col_name,
                 "from": [vertex_col_name],
@@ -71,7 +71,7 @@ class GraphManagementTest(unittest.TestCase):
             }]
         )
         self.assertEqual(
-            sorted(graph.list_vertex_collections),
+            sorted(graph.vertex_collections),
             sorted([orphan_col_name, vertex_col_name])
         )
         properties = graph.details
@@ -100,19 +100,19 @@ class GraphManagementTest(unittest.TestCase):
         graph_name = generate_graph_name(self.db)
         graph = self.db.create_graph(graph_name)
         self.assertIn(graph_name, self.db.list_graphs())
-        self.assertEqual(graph.list_vertex_collections, [])
+        self.assertEqual(graph.vertex_collections, [])
         # Create the vertex collection to the graph
         graph.create_vertex_collection(vertex_col_name)
         self.assertEqual(
-            graph.list_vertex_collections,
+            graph.vertex_collections,
             [vertex_col_name]
         )
         # Delete the vertex collection (completely)
         graph.delete_vertex_collection(
             vertex_col_name,
-            drop_collection=True
+            purge=True
         )
-        self.assertEqual(graph.list_vertex_collections, [])
+        self.assertEqual(graph.vertex_collections, [])
         self.assertNotIn(vertex_col_name, self.db.list_collections["all"])
 
     def test_create_and_delete_edge_definition(self):
@@ -130,20 +130,20 @@ class GraphManagementTest(unittest.TestCase):
             "from": [vertex_col_name],
             "to": [vertex_col_name]
         }
-        graph.add_edge_definition(
+        graph.create_edge_definition(
             edge_col_name,
             [vertex_col_name],
             [vertex_col_name]
         )
         self.assertEqual(
-            graph.list_edge_definitions,
+            graph.edge_definitions,
             [edge_definition]
         )
         graph.delete_edge_definition(
             edge_col_name,
-            drop_collection=True
+            purge=True
         )
-        self.assertEqual(graph.list_edge_definitions, [])
+        self.assertEqual(graph.edge_definitions, [])
         self.assertNotIn(edge_col_name, self.db.list_collections["all"])
 
     def test_replace_edge_definition(self):
@@ -169,13 +169,13 @@ class GraphManagementTest(unittest.TestCase):
             "from": [vertex_col_name],
             "to": [vertex_col_name]
         }
-        graph.add_edge_definition(
+        graph.create_edge_definition(
             edge_col_name,
             [vertex_col_name],
             [vertex_col_name]
         )
         self.assertEqual(
-            graph.list_edge_definitions,
+            graph.edge_definitions,
             [edge_definition]
         )
 
@@ -191,7 +191,7 @@ class GraphManagementTest(unittest.TestCase):
             [vertex_col_name_2]
         )
         self.assertEqual(
-            graph.list_edge_definitions,
+            graph.edge_definitions,
             [edge_definition_2]
         )
 

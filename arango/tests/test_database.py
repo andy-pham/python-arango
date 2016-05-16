@@ -12,17 +12,14 @@ from arango.tests.utils import (
     generate_graph_name
 )
 
-
-def setup_module(*_):
-    global conn, db_name, system_db, db, col_name, graph_name
-
-    conn = Connection()
-    db_name = generate_db_name(conn)
-    db = conn.create_database(db_name)
-    col_name = generate_col_name(db)
-    db.create_collection(col_name)
-    graph_name = generate_graph_name(db)
-    db.create_graph(graph_name)
+conn = Connection()
+db_name = generate_db_name(conn)
+db = conn.create_database(db_name)
+col_name_1 = generate_col_name(db)
+col_name_2 = ''
+db.create_collection(col_name_1)
+graph_name = generate_graph_name(db)
+db.create_graph(graph_name)
 
 
 def teardown_module(*_):
@@ -34,6 +31,7 @@ def test_properties():
     assert repr(db) == "<ArangoDB database '{}'>".format(db_name)
 
 
+@pytest.mark.order1
 def test_options():
     options = db.options()
     assert 'id' in options
@@ -42,24 +40,31 @@ def test_options():
     assert options['name'] == db_name
 
 
-def test_collection_management():
-    # Test list all collections
+@pytest.mark.order2
+def test_list_collections():
     cols = db.list_collections()
-    assert all(c == col_name or c.startswith('_') for c in cols)
+    assert all(c == col_name_1 or c.startswith('_') for c in cols)
 
-    # Test get collection
-    for col in [db.collection(col_name), db[col_name]]:
+
+@pytest.mark.order3
+def test_get_collection():
+    for col in [db.collection(col_name_1), db[col_name_1]]:
         assert isinstance(col, Collection)
-        assert col.name == col_name
+        assert col.name == col_name_1
+
+
+@pytest.mark.order4
+def test_create_collection():
+    global col_name_2
 
     # Test create duplicate collection
     with pytest.raises(CollectionCreateError):
-        db.create_collection(col_name)
+        db.create_collection(col_name_1)
 
     # Test create collection with parameters
-    new_col_name = generate_col_name(db)
+    col_name_2 = generate_col_name(db)
     col = db.create_collection(
-        name=new_col_name,
+        name=col_name_2,
         sync=True,
         compact=False,
         journal_size=7774208,
@@ -75,7 +80,7 @@ def test_collection_management():
     )
     options = col.options()
     assert 'id' in options
-    assert options['name'] == new_col_name
+    assert options['name'] == col_name_2
     assert options['sync'] == True
     assert options['compact'] == False
     assert options['journal_size'] == 7774208
@@ -87,33 +92,44 @@ def test_collection_management():
     assert options['key_increment'] == 9
     assert options['key_offset'] == 100
 
+
+@pytest.mark.order5
+def test_drop_collection():
     # Test drop collection
-    result = db.drop_collection(new_col_name)
+    result = db.drop_collection(col_name_2)
     assert result is True
-    assert new_col_name not in db.list_collections()
+    assert col_name_2 not in db.list_collections()
 
     # Test drop missing collection
     with pytest.raises(CollectionDropError):
-        db.drop_collection(new_col_name)
+        db.drop_collection(col_name_2)
 
     # Test drop missing collection (ignore_missing)
-    result = db.drop_collection(new_col_name, ignore_missing=True)
+    result = db.drop_collection(col_name_2, ignore_missing=True)
     assert result is False
 
 
-def test_graph_management():
-    # Test list all graphs
+@pytest.mark.order6
+def test_list_graphs():
     assert db.list_graphs() == [graph_name]
 
-    # Test get graph
+
+@pytest.mark.order7
+def test_get_graph():
     graph = db.graph(graph_name)
     assert isinstance(graph, Graph)
     assert graph.name == graph_name
 
+
+@pytest.mark.order8
+def test_create_graph():
     # Test create duplicate graph
     with pytest.raises(GraphCreateError):
         db.create_graph(graph_name)
 
+
+@pytest.mark.order9
+def test_drop_graph():
     # Test drop graph
     result = db.drop_graph(graph_name)
     assert result is True
@@ -126,6 +142,3 @@ def test_graph_management():
     # Test drop missing graph (ignore_missing)
     result = db.drop_graph(graph_name, ignore_missing=True)
     assert result is False
-
-
-

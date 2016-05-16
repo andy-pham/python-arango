@@ -1,10 +1,12 @@
 """ArangoDB Graph."""
 
 from arango.exceptions import *
+from arango.collection import Collection
 from arango.constants import HTTP_OK
+from arango.wrapper import APIWrapper
 
 
-class Graph(object):
+class Graph(APIWrapper):
     """Wrapper for ArangoDB's graph-specific APIs:
 
     1. Graph Properties
@@ -19,7 +21,7 @@ class Graph(object):
         """Initialize the wrapper object.
 
         :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection
+        :type connection: arango.connection.Connection | arango.batch.Batch
         :param name: the name of the graph
         :type name: str
         """
@@ -57,19 +59,10 @@ class Graph(object):
     # Vertex Collection Management #
     ################################
 
-    def list_orphan_collections(self):
-        """Return the orphan collections of the graph.
-
-        :returns: the string names of the orphan collections
-        :rtype: list
-        :raises: GraphPropertiesError
-        """
-        return self.options["orphan_collections"]
-
-    def list_vertex_collections(self):
+    def vertex_collections(self):
         """Return the vertex collections of the graph.
 
-        :returns: the string names of the vertex collections
+        :returns: the names of the vertex collections
         :rtype: list
         :raises: VertexCollectionListError
         """
@@ -93,32 +86,32 @@ class Graph(object):
         )
         if res.status_code not in HTTP_OK:
             raise VertexCollectionCreateError(res)
-        return self.list_vertex_collections
+        return Collection(self._conn, name, edge=False)
 
-    def delete_vertex_collection(self, name, drop_collection=False):
+    def delete_vertex_collection(self, name, purge=False):
         """Delete a vertex collection from the graph.
 
         :param name: the name of the vertex collection to delete
         :type name: str
-        :param drop_collection: whether or not to drop the collection also
-        :type drop_collection: bool
+        :param purge: whether or not to drop the collection as well
+        :type purge: bool
         :returns: the updated list of the vertex collection names
         :rtype: list
         :raises: VertexCollectionDropError
         """
         res = self._conn.delete(
             "/_api/gharial/{}/vertex/{}".format(self._name, name),
-            params={"dropCollection": drop_collection}
+            params={"dropCollection": purge}
         )
         if res.status_code not in HTTP_OK:
             raise VertexCollectionDropError(res)
-        return self.list_vertex_collections
+        return not res.body['error']
 
     ##############################
     # Edge Definition Management #
     ##############################
 
-    def list_edge_definitions(self):
+    def edge_definitions(self):
         """Return the edge definitions of the graph.
 
         :returns: the edge definitions of this graph
@@ -127,8 +120,8 @@ class Graph(object):
         """
         return self.options["edge_definitions"]
 
-    def add_edge_definition(self, edge_collection, from_vertex_collections,
-                            to_vertex_collections):
+    def create_edge_definition(self, edge_collection, from_vertex_collections,
+                               to_vertex_collections):
         """Create a edge definition to this graph.
 
         :param edge_collection: the name of the edge collection
@@ -182,21 +175,20 @@ class Graph(object):
             raise EdgeDefinitionReplaceError(res)
         return res.body["graph"]["edgeDefinitions"]
 
-    def delete_edge_definition(self, collection,
-                               drop_collection=False):
+    def delete_edge_definition(self, collection, purge=False):
         """Delete the specified edge definition from this graph.
 
         :param collection: the name of the edge collection to delete
         :type collection: str
-        :param drop_collection: whether or not to drop the collection also
-        :type drop_collection: bool
+        :param purge: whether or not to drop the collection also
+        :type purge: bool
         :returns: the updated list of edge definitions
         :rtype: list
         :raises: EdgeDefinitionDeleteError
         """
         res = self._conn.delete(
             "/_api/gharial/{}/edge/{}".format(self._name, collection),
-            params={"dropCollection": drop_collection}
+            params={"dropCollection": purge}
         )
         if res.status_code not in HTTP_OK:
             raise EdgeDefinitionDeleteError(res)
@@ -576,7 +568,7 @@ class Graph(object):
     # Graph Traversals #
     ####################
 
-    def traverse(self, start_vertex, direction=None, strategy=None, order=None,
+    def traverse(self, start, direction=None, strategy=None, order=None,
                  item_order=None, uniqueness=None, max_iterations=None,
                  min_depth=None, max_depth=None, init=None, filters=None,
                  visitor=None, expander=None, sort=None):
@@ -586,8 +578,8 @@ class Graph(object):
         and ``sort`` please refer to the ArangoDB HTTP API documentation:
         https://docs.arangodb.com/HttpTraversal/README.html
 
-        :param start_vertex: the ID of the start vertex
-        :type start_vertex: str
+        :param start: the ID of the start vertex
+        :type start: str
         :param direction: "outbound" or "inbound" or "any"
         :type direction: str
         :param strategy: "depthfirst" or "breadthfirst"
@@ -619,7 +611,7 @@ class Graph(object):
         :raises: GraphTraversalError
         """
         data = {
-            "startVertex": start_vertex,
+            "startVertex": start,
             "graphName": self._name,
             "direction": direction,
             "strategy": strategy,

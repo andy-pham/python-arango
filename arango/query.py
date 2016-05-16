@@ -128,7 +128,7 @@ class Query(object):
             raise AQLQueryExecuteError(res)
         return Cursor(self._conn, res)
 
-    def list_functions(self):
+    def functions(self):
         """List the AQL functions defined in this database.
 
         :returns: a mapping of AQL function names to its javascript code

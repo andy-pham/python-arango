@@ -3,10 +3,7 @@ from __future__ import unicode_literals
 from copy import deepcopy
 
 from arango.batch import Batch
-from arango.collection import (
-    Collection,
-    EdgeCollection
-)
+from arango.collection import Collection
 from arango.constants import (
     HTTP_OK,
     COLLECTION_STATUSES,
@@ -31,7 +28,7 @@ class Database(object):
 
     def __init__(self, connection, name):
         connection = deepcopy(connection)
-        connection.register_db(name)
+        connection.set_db(name)
         self._name = name
         self._conn = connection
 
@@ -56,8 +53,8 @@ class Database(object):
     def query(self):
         return Query(self._conn)
 
-    def batch(self):
-        return Batch(self._conn)
+    def batch(self, return_result=True):
+        return Batch(self._conn, return_result)
 
     def transaction(self):
         return Transaction(self._conn)
@@ -100,27 +97,18 @@ class Database(object):
             for col in res.body['collections']
         }
 
-    def collection(self, name):
+    def collection(self, name, edge=False):
         """Return the Collection object of the specified name.
 
         :param name: the name of the collection
         :type name: str
+        :param edge: whether this collection is an edge collection
+        :type edge: bool
         :returns: the requested collection object
         :rtype: arango.collection.Collection
         :raises: TypeError
         """
-        return Collection(self._conn, name)
-
-    def edge_collection(self, name):
-        """Return the EdgeCollection object of the specified name.
-
-        :param name: the name of the edge collection
-        :type name: str
-        :returns: the requested edge collection object
-        :rtype: arango.collection.EdgeCollection
-        :raises: TypeError
-        """
-        return EdgeCollection(self._conn, name)
+        return Collection(self._conn, name, edge)
 
     def create_collection(self, name, sync=False, compact=True, system=False,
                           journal_size=None, edge=False, volatile=False,
@@ -186,7 +174,7 @@ class Database(object):
         res = self._conn.post('/_api/collection', data=data)
         if res.status_code not in HTTP_OK:
             raise CollectionCreateError(res)
-        return self.edge_collection(name) if edge else self.collection(name)
+        return self.collection(name, edge)
 
     def drop_collection(self, name, ignore_missing=False):
         """Drop the specified collection from this database.
