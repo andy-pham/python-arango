@@ -89,10 +89,10 @@ def clean_keys(obj):
     if isinstance(obj, Mapping):
         return {
             k: v for k, v in obj.items()
-            if not (k != '_key' and k.startswith("_"))
+            if not (k not in {'_key', '_from', '_to'} and k.startswith("_"))
         }
     elif isinstance(obj, Iterable):
         return [{
             k: v for k, v in document.items()
-            if not (k != '_key' and k.startswith("_"))
+            if not (k not in {'_key', '_from', '_to'} and k.startswith("_"))
         } for document in obj]

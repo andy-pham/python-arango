@@ -415,8 +415,8 @@ class Collection(APIWrapper):
 
         return request, handler
 
-    def insert_one(self, document, sync=False):
-        """Insert a new document into this collection.
+    def insert(self, document, sync=False):
+        """Insert a single document into the collection.
 
         If ``data`` contains the ``_key`` key, the value must be unique.
         If this collection is an edge collection, ``data`` must contain the
@@ -499,8 +499,8 @@ class Collection(APIWrapper):
             return res.body
         return request, handler
 
-    def get_one(self, key, revision=None, match=True):
-        """Return the document of the given key.
+    def get(self, key, revision=None, match=True):
+        """Return the document of with the specified key.
 
         If the document revision ``rev`` is specified, it is compared against
         the revision of the retrieved document. If ``match`` is set to True and
@@ -556,7 +556,7 @@ class Collection(APIWrapper):
             return res.body['documents']
         return request, handler
 
-    def find_one(self, filters):
+    def find(self, filters):
         """Return the first document matching the given example document body.
 
         :param filters: the match filters
@@ -611,8 +611,8 @@ class Collection(APIWrapper):
             return Cursor(self._conn, res)
         return request, handler
 
-    def update_one(self, key, data, revision=None, merge=True, keep_none=True,
-                   sync=False):
+    def update(self, key, data, revision=None, merge=True, keep_none=True,
+               sync=False):
         """Update the specified document in this collection.
 
         If ``keep_none`` is set to True, then attributes with value None
@@ -1211,8 +1211,8 @@ class Collection(APIWrapper):
 
         return request, handler
 
-    def find_in_rectangle(self, latitude1, longitude1, latitude2, longitude2,
-                          skip=None, limit=None, geo=None):
+    def find_in_square(self, latitude1, longitude1, latitude2, longitude2,
+                       skip=None, limit=None, geo=None):
         """Return all documents in a rectangle around the given coordinate.
 
         In order to execute this query a geo index must be defined for the
@@ -1310,7 +1310,7 @@ class Collection(APIWrapper):
     # Index Management #
     ####################
 
-    def list_indexes(self):
+    def indexes(self):
         """Return the details on the indexes of this collection.
 
         :returns: the index details

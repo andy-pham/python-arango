@@ -126,7 +126,7 @@ def test_checksum():
     assert col.checksum(revision=False, data=False) == 0
     assert col.checksum(revision=False, data=True) == 0
 
-    col.insert_one({'foo': 'bar'})
+    col.insert({'foo': 'bar'})
     assert col.checksum(revision=True, data=False) > 0
     assert col.checksum(revision=True, data=True) > 0
     assert col.checksum(revision=False, data=False) > 0
@@ -134,8 +134,8 @@ def test_checksum():
 
 
 def test_truncate():
-    col.insert_one({'foo': 'bar'})
-    col.insert_one({'foo': 'bar'})
+    col.insert({'foo': 'bar'})
+    col.insert({'foo': 'bar'})
     assert len(col) > 1
 
     result = col.truncate()
@@ -145,24 +145,24 @@ def test_truncate():
 
 def test_insert():
     for i in range(1, 6):
-        doc = col.insert_one({'_key': str(i), 'foo': i * 100})
+        doc = col.insert({'_key': str(i), 'foo': i * 100})
         assert doc['_id'] == '{}/{}'.format(col.name, str(i))
         assert doc['_key'] == str(i)
 
     assert len(col) == 5
     for key in range(1, 6):
         assert key in col
-        document = col.get_one(key)
+        document = col.get(key)
         assert document['_key'] == str(key)
         assert document['foo'] == key * 100
 
     assert '6' not in col
-    col.insert_one({'_key': '6', 'foo': 200}, sync=True)
+    col.insert({'_key': '6', 'foo': 200}, sync=True)
     assert '6' in col
-    assert col.get_one('6')['foo'] == 200
+    assert col.get('6')['foo'] == 200
 
     with pytest.raises(DocumentInsertError):
-        col.insert_one({'_key': '1', 'foo': 300})
+        col.insert({'_key': '1', 'foo': 300})
     assert col['1']['foo'] == 100
 
 
@@ -180,7 +180,7 @@ def test_insert_many():
     assert len(col) == 5
     for key in range(1, 6):
         assert key in col
-        document = col.get_one(key)
+        document = col.get(key)
         assert document['_key'] == str(key)
         assert document['foo'] == key * 100
 
@@ -209,18 +209,18 @@ def test_insert_many():
 
 
 def test_get():
-    col.insert_one({'_key': '1', 'foo': 100})
-    doc = col.get_one('1')
+    col.insert({'_key': '1', 'foo': 100})
+    doc = col.get('1')
     assert doc['foo'] == 100
 
     old_rev = doc['_rev']
     new_rev = str(int(old_rev) + 1)
 
-    assert col.get_one('2') is None
-    assert col.get_one('1', revision=old_rev) == doc
+    assert col.get('2') is None
+    assert col.get('1', revision=old_rev) == doc
 
     with pytest.raises(DocumentRevisionError):
-        col.get_one('1', revision=new_rev)
+        col.get('1', revision=new_rev)
 
 
 def test_get_many():
@@ -245,30 +245,30 @@ def test_get_many():
 
 
 def test_update():
-    col.insert_one({'_key': '1', 'foo': 100})
+    col.insert({'_key': '1', 'foo': 100})
     assert col['1']['foo'] == 100
 
-    doc = col.update_one('1', {'foo': 200})
+    doc = col.update('1', {'foo': 200})
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert col['1']['foo'] == 200
 
-    doc = col.update_one('1', {'foo': None}, keep_none=True)
+    doc = col.update('1', {'foo': None}, keep_none=True)
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert col['1']['foo'] is None
     
-    doc = col.update_one('1', {'foo': {'bar': 1}}, sync=True)
+    doc = col.update('1', {'foo': {'bar': 1}}, sync=True)
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert col['1']['foo'] == {'bar': 1}
 
-    doc = col.update_one('1', {'foo': {'baz': 2}}, merge=True)
+    doc = col.update('1', {'foo': {'baz': 2}}, merge=True)
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert col['1']['foo'] == {'bar': 1, 'baz': 2}
 
-    doc = col.update_one('1', {'foo': None}, keep_none=False)
+    doc = col.update('1', {'foo': None}, keep_none=False)
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert 'foo' not in col['1']
@@ -277,16 +277,16 @@ def test_update():
     new_rev = str(int(old_rev) + 1)
 
     with pytest.raises(DocumentRevisionError):
-        col.update_one('1', {'foo': 300, '_rev': new_rev})
+        col.update('1', {'foo': 300, '_rev': new_rev})
     assert 'foo' not in col['1']
 
     with pytest.raises(DocumentUpdateError):
-        col.update_one('2', {'foo': 300})
+        col.update('2', {'foo': 300})
     assert 'foo' not in col['1']
 
 
 def test_replace():
-    doc = col.insert_one({'_key': '1', 'foo': 100})
+    doc = col.insert({'_key': '1', 'foo': 100})
     assert doc['_id'] == '{}/1'.format(col.name)
     assert doc['_key'] == '1'
     assert col['1']['foo'] == 100
@@ -423,7 +423,7 @@ def test_last():
         {'_key': '1', 'foo': 100},
     ]
     for doc in inserted:
-        col.insert_one(doc)
+        col.insert(doc)
     doc = col.last(0)
     assert doc['_key'] == '1'
     assert doc['foo'] == 100
@@ -458,7 +458,7 @@ def test_all():
         {'_key': '5', 'foo': 500},
     ]
     for doc in inserted:
-        col.insert_one(doc)
+        col.insert(doc)
     fetched = list(col.all())
     assert len(fetched) == len(inserted)
     for doc in fetched:
@@ -491,8 +491,8 @@ def test_random():
 
 
 def test_find_one():
-    assert col.find_one({'foo': 100}) is None
-    assert col.find_one({}) is None
+    assert col.find({'foo': 100}) is None
+    assert col.find({}) is None
     inserted = [
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -502,15 +502,15 @@ def test_find_one():
     ]
     col.insert_many(inserted)
 
-    assert col.find_one({'_key': '6'}) is None
-    assert col.find_one({'foo': 400}) is None
-    assert col.find_one({'baz': 100}) is None
-    assert col.find_one({}) is not None
+    assert col.find({'_key': '6'}) is None
+    assert col.find({'foo': 400}) is None
+    assert col.find({'baz': 100}) is None
+    assert col.find({}) is not None
 
     for i in [100, 200, 300]:
-        assert col.find_one({'foo': i})['foo'] == i
+        assert col.find({'foo': i})['foo'] == i
     for i in range(1, 6):
-        assert col.find_one({'_key': str(i)})['_key'] == str(i)
+        assert col.find({'_key': str(i)})['_key'] == str(i)
 
 
 def test_find_many():
@@ -612,11 +612,13 @@ def test_find_and_delete():
         {'_key': '5', 'foo': 300},
     ])
 
+    assert '4' in col
     assert col.find_and_delete({'foo': 200}) == 1
     assert '4' not in col
 
+    assert '5' in col
     assert col.find_and_delete({'foo': 300}, sync=True) == 1
-    assert '4' not in col
+    assert '5' not in col
 
     assert col.find_and_delete({'foo': 100}, limit=2) == 2
     count = 0
@@ -701,7 +703,7 @@ def test_find_in_rectangle():
         {'_key': '3', 'coordinates': [5, 1]},
         {'_key': '4', 'coordinates': [5, 5]},
     ])
-    result = col.find_in_rectangle(
+    result = col.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -713,7 +715,7 @@ def test_find_in_rectangle():
     ]
     assert clean_keys(list(result)) == expected
 
-    result = col.find_in_rectangle(
+    result = col.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -725,7 +727,7 @@ def test_find_in_rectangle():
     ]
     assert clean_keys(list(result)) == expected
 
-    result = col.find_in_rectangle(
+    result = col.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -770,7 +772,7 @@ def test_list_indexes():
         'fields': ['_key'],
         'unique': True
     }
-    indexes = col.list_indexes()
+    indexes = col.indexes()
     assert isinstance(indexes, dict)
     assert expected_index in indexes.values()
 
@@ -784,7 +786,7 @@ def test_add_hash_index():
         'fields': ['attr1', 'attr2'],
         'unique': True
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
 
 def test_add_cap_constraint():
@@ -795,7 +797,7 @@ def test_add_cap_constraint():
         'byte_size': 40000,
         'unique': False
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
 
 def test_add_skiplist_index():
@@ -806,7 +808,7 @@ def test_add_skiplist_index():
         'fields': ['attr1', 'attr2'],
         'unique': True
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
 
 def test_add_geo_index():
@@ -824,7 +826,7 @@ def test_add_geo_index():
         'ignore_none': True,
         'constraint': False
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
     # With two attributes
     col.add_geo_index(
@@ -839,7 +841,7 @@ def test_add_geo_index():
         'ignore_none': True,
         'constraint': False
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
     # With more than two attributes (should fail)
     with pytest.raises(IndexCreateError):
@@ -862,18 +864,18 @@ def test_add_fulltext_index():
         'min_length': 10,
         'unique': False,
     }
-    assert expected_index in col.list_indexes().values()
+    assert expected_index in col.indexes().values()
 
 
 def test_delete_index():
-    old_indexes = set(col.list_indexes())
+    old_indexes = set(col.indexes())
     col.add_hash_index(['attr1', 'attr2'], unique=True)
     col.add_skiplist_index(['attr1', 'attr2'], unique=True)
     col.add_fulltext_index(fields=['attr1'], min_length=10)
 
-    new_indexes = set(col.list_indexes())
+    new_indexes = set(col.indexes())
     assert new_indexes.issuperset(old_indexes)
 
     for index_id in new_indexes - old_indexes:
         col.delete_index(index_id)
-    assert set(col.list_indexes()) == old_indexes
+    assert set(col.indexes()) == old_indexes

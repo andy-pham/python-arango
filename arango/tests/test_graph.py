@@ -139,7 +139,7 @@ def test_checksum():
     assert collection.checksum(revision=False, data=False) == 0
     assert collection.checksum(revision=False, data=True) == 0
 
-    collection.insert_one({'foo': 'bar'})
+    collection.insert({'foo': 'bar'})
     assert collection.checksum(revision=True, data=False) > 0
     assert collection.checksum(revision=True, data=True) > 0
     assert collection.checksum(revision=False, data=False) > 0
@@ -147,8 +147,8 @@ def test_checksum():
 
 
 def test_truncate():
-    collection.insert_one({'foo': 'bar'})
-    collection.insert_one({'foo': 'bar'})
+    collection.insert({'foo': 'bar'})
+    collection.insert({'foo': 'bar'})
     assert len(collection) > 1
 
     result = collection.truncate()
@@ -158,7 +158,7 @@ def test_truncate():
 
 def test_insert():
     for i in range(1, 6):
-        doc = collection.insert_one({'_key': str(i), 'foo': i * 100})
+        doc = collection.insert({'_key': str(i), 'foo': i * 100})
         assert doc['_id'] == '{}/{}'.format(collection.name, str(i))
         assert doc['_key'] == str(i)
 
@@ -170,12 +170,12 @@ def test_insert():
         assert document['foo'] == key * 100
 
     assert '6' not in collection
-    collection.insert_one({'_key': '6', 'foo': 200}, sync=True)
+    collection.insert({'_key': '6', 'foo': 200}, sync=True)
     assert '6' in collection
     assert collection.get('6')['foo'] == 200
 
     with pytest.raises(DocumentInsertError):
-        collection.insert_one({'_key': '1', 'foo': 300})
+        collection.insert({'_key': '1', 'foo': 300})
     assert collection['1']['foo'] == 100
 
 
@@ -213,7 +213,7 @@ def test_insert_many():
 
 
 def test_get():
-    collection.insert_one({'_key': '1', 'foo': 100})
+    collection.insert({'_key': '1', 'foo': 100})
     doc = collection.get('1')
     assert doc['foo'] == 100
 
@@ -249,30 +249,30 @@ def test_get_many():
 
 
 def test_update():
-    collection.insert_one({'_key': '1', 'foo': 100})
+    collection.insert({'_key': '1', 'foo': 100})
     assert collection['1']['foo'] == 100
 
-    doc = collection.update_one('1', {'foo': 200})
+    doc = collection.update('1', {'foo': 200})
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] == 200
 
-    doc = collection.update_one('1', {'foo': None}, keep_none=True)
+    doc = collection.update('1', {'foo': None}, keep_none=True)
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] is None
 
-    doc = collection.update_one('1', {'foo': {'bar': 1}}, sync=True)
+    doc = collection.update('1', {'foo': {'bar': 1}}, sync=True)
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] == {'bar': 1}
 
-    doc = collection.update_one('1', {'foo': {'baz': 2}}, merge=True)
+    doc = collection.update('1', {'foo': {'baz': 2}}, merge=True)
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] == {'bar': 1, 'baz': 2}
 
-    doc = collection.update_one('1', {'foo': None}, keep_none=False)
+    doc = collection.update('1', {'foo': None}, keep_none=False)
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert 'foo' not in collection['1']
@@ -281,16 +281,16 @@ def test_update():
     new_rev = str(int(old_rev) + 1)
 
     with pytest.raises(DocumentRevisionError):
-        collection.update_one('1', {'foo': 300, '_rev': new_rev})
+        collection.update('1', {'foo': 300, '_rev': new_rev})
     assert 'foo' not in collection['1']
 
     with pytest.raises(DocumentUpdateError):
-        collection.update_one('2', {'foo': 300})
+        collection.update('2', {'foo': 300})
     assert 'foo' not in collection['1']
 
 
 def test_replace():
-    doc = collection.insert_one({'_key': '1', 'foo': 100})
+    doc = collection.insert({'_key': '1', 'foo': 100})
     assert doc['_id'] == '{}/1'.format(collection.name)
     assert doc['_key'] == '1'
     assert collection['1']['foo'] == 100
@@ -427,7 +427,7 @@ def test_last():
         {'_key': '1', 'foo': 100},
     ]
     for doc in inserted:
-        collection.insert_one(doc)
+        collection.insert(doc)
     doc = collection.last(0)
     assert doc['_key'] == '1'
     assert doc['foo'] == 100
@@ -462,7 +462,7 @@ def test_all():
         {'_key': '5', 'foo': 500},
     ]
     for doc in inserted:
-        collection.insert_one(doc)
+        collection.insert(doc)
     fetched = list(collection.all())
     assert len(fetched) == len(inserted)
     for doc in fetched:
@@ -495,8 +495,8 @@ def test_random():
 
 
 def test_find_one():
-    assert collection.find_one({'foo': 100}) is None
-    assert collection.find_one({}) is None
+    assert collection.find({'foo': 100}) is None
+    assert collection.find({}) is None
     inserted = [
         {'_key': '1', 'foo': 100},
         {'_key': '2', 'foo': 100},
@@ -506,15 +506,15 @@ def test_find_one():
     ]
     collection.insert_many(inserted)
 
-    assert collection.find_one({'_key': '6'}) is None
-    assert collection.find_one({'foo': 400}) is None
-    assert collection.find_one({'baz': 100}) is None
-    assert collection.find_one({}) is not None
+    assert collection.find({'_key': '6'}) is None
+    assert collection.find({'foo': 400}) is None
+    assert collection.find({'baz': 100}) is None
+    assert collection.find({}) is not None
 
     for i in [100, 200, 300]:
-        assert collection.find_one({'foo': i})['foo'] == i
+        assert collection.find({'foo': i})['foo'] == i
     for i in range(1, 6):
-        assert collection.find_one({'_key': str(i)})['_key'] == str(i)
+        assert collection.find({'_key': str(i)})['_key'] == str(i)
 
 
 def test_find_many():
@@ -705,7 +705,7 @@ def test_find_in_rectangle():
         {'_key': '3', 'coordinates': [5, 1]},
         {'_key': '4', 'coordinates': [5, 5]},
     ])
-    result = collection.find_in_rectangle(
+    result = collection.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -717,7 +717,7 @@ def test_find_in_rectangle():
     ]
     assert clean_keys(result) == expected
 
-    result = collection.find_in_rectangle(
+    result = collection.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -729,7 +729,7 @@ def test_find_in_rectangle():
     ]
     assert clean_keys(result) == expected
 
-    result = collection.find_in_rectangle(
+    result = collection.find_in_square(
         latitude1=0,
         longitude1=0,
         latitude2=6,
@@ -774,7 +774,7 @@ def test_list_indexes():
         'fields': ['_key'],
         'unique': True
     }
-    indexes = collection.list_indexes()
+    indexes = collection.indexes()
     assert isinstance(indexes, dict)
     assert expected_index in indexes.values()
 
@@ -788,7 +788,7 @@ def test_add_hash_index():
         'fields': ['attr1', 'attr2'],
         'unique': True
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
 
 def test_add_cap_constraint():
@@ -799,7 +799,7 @@ def test_add_cap_constraint():
         'byte_size': 40000,
         'unique': False
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
 
 def test_add_skiplist_index():
@@ -810,7 +810,7 @@ def test_add_skiplist_index():
         'fields': ['attr1', 'attr2'],
         'unique': True
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
 
 def test_add_geo_index():
@@ -828,7 +828,7 @@ def test_add_geo_index():
         'ignore_none': True,
         'constraint': False
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
     # With two attributes
     collection.add_geo_index(
@@ -843,7 +843,7 @@ def test_add_geo_index():
         'ignore_none': True,
         'constraint': False
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
     # With more than two attributes (should fail)
     with pytest.raises(IndexCreateError):
@@ -866,21 +866,21 @@ def test_add_fulltext_index():
         'min_length': 10,
         'unique': False,
     }
-    assert expected_index in collection.list_indexes().values()
+    assert expected_index in collection.indexes().values()
 
 
 def test_delete_index():
-    old_indexes = set(collection.list_indexes())
+    old_indexes = set(collection.indexes())
     collection.add_hash_index(['attr1', 'attr2'], unique=True)
     collection.add_skiplist_index(['attr1', 'attr2'], unique=True)
     collection.add_fulltext_index(fields=['attr1'], min_length=10)
 
-    new_indexes = set(collection.list_indexes())
+    new_indexes = set(collection.indexes())
     assert new_indexes.issuperset(old_indexes)
 
     for index_id in new_indexes - old_indexes:
         collection.delete_index(index_id)
-    assert set(collection.list_indexes()) == old_indexes
+    assert set(collection.indexes()) == old_indexes
 
 
 
