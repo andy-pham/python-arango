@@ -22,7 +22,7 @@ class DatabaseManagementTest(unittest.TestCase):
 
     def test_database_create_and_delete(self):
         self.arango.create_database(self.db_name)
-        self.assertIn(self.db_name, self.arango.list_databases())
+        self.assertIn(self.db_name, self.arango.databases())
 
         # Check the properties of the new database
         self.assertEqual(self.arango.db(self.db_name).name,
@@ -31,7 +31,7 @@ class DatabaseManagementTest(unittest.TestCase):
 
         # Delete the test database
         self.arango.drop_database(self.db_name)
-        self.assertNotIn(self.db_name, self.arango.list_databases())
+        self.assertNotIn(self.db_name, self.arango.databases())
 
     def test_database_properties(self):
         db = self.arango.db("_system")

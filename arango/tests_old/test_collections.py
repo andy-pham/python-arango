@@ -28,7 +28,7 @@ class CollectionManagementTest(unittest.TestCase):
     def test_create_collection(self):
         col_name = generate_col_name(self.db)
         self.db.create_collection(col_name)
-        self.assertIn(col_name, self.db.list_collections["all"])
+        self.assertIn(col_name, self.db.collections["all"])
 
     def test_rename_collection(self):
         # Create a new collection
@@ -38,8 +38,8 @@ class CollectionManagementTest(unittest.TestCase):
         # Rename the collection
         new_col_name = generate_col_name(self.db)
         self.db.rename_collection(col_name, new_col_name)
-        self.assertNotIn(col_name, self.db.list_collections["all"])
-        self.assertIn(new_col_name, self.db.list_collections["all"])
+        self.assertNotIn(col_name, self.db.collections["all"])
+        self.assertIn(new_col_name, self.db.collections["all"])
         # Ensure it is the same collection by checking the ID
         self.assertEqual(self.db.collection(new_col_name).id, col_id)
 
@@ -47,10 +47,10 @@ class CollectionManagementTest(unittest.TestCase):
         # Create a new collection
         col_name = generate_col_name(self.db)
         self.db.create_collection(col_name)
-        self.assertIn(col_name, self.db.list_collections["all"])
+        self.assertIn(col_name, self.db.collections["all"])
         # Delete the collection and ensure that it's gone
         self.db.drop_collection(col_name)
-        self.assertNotIn(col_name, self.db.list_collections)
+        self.assertNotIn(col_name, self.db.collections)
 
     def test_collection_create_with_config(self):
         # Create a new collection with custom defined properties

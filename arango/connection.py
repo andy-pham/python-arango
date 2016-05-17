@@ -456,10 +456,7 @@ class Connection(object):
     # Database Management #
     #######################
 
-    def db(self, name):
-        return Database(self, name)
-
-    def list_databases(self, user_only=False):
+    def databases(self, user_only=False):
         """"Return the database names.
 
         :param user_only: list only the databases accessible by the user
@@ -476,6 +473,16 @@ class Connection(object):
         if res.status_code not in HTTP_OK:
             raise DatabaseListError(res)
         return res.body['result']
+
+    def db(self, name):
+        """Return the database object.
+
+        :param name: the name of the database
+        :type name: str
+        :returns: the database object
+        :rtype: arango.database.Database
+        """
+        return Database(self, name)
 
     def create_database(self, name, users=None):
         """Create a new database.
@@ -518,7 +525,7 @@ class Connection(object):
     # User Management #
     ###################
 
-    def list_users(self):
+    def users(self):
         """Return details on all users.
 
         :returns: the mapping of usernames to user information
@@ -682,7 +689,7 @@ class Connection(object):
     # Task Management #
     ###################
 
-    def list_tasks(self):
+    def tasks(self):
         """Return all server tasks that are currently active.
 
         :returns: server tasks that are currently active
@@ -694,7 +701,7 @@ class Connection(object):
             raise TasksListError(res)
         return {record['id']: record for record in res.body}
 
-    def get_task(self, task_id):
+    def task(self, task_id):
         """Return the active server task with the given id.
 
         :param task_id: the id of the server task

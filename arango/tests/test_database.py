@@ -42,7 +42,7 @@ def test_options():
 
 @pytest.mark.order2
 def test_list_collections():
-    cols = db.list_collections()
+    cols = db.collections()
     assert all(c == col_name_1 or c.startswith('_') for c in cols)
 
 
@@ -98,7 +98,7 @@ def test_drop_collection():
     # Test drop collection
     result = db.drop_collection(col_name_2)
     assert result is True
-    assert col_name_2 not in db.list_collections()
+    assert col_name_2 not in db.collections()
 
     # Test drop missing collection
     with pytest.raises(CollectionDropError):
@@ -111,7 +111,7 @@ def test_drop_collection():
 
 @pytest.mark.order6
 def test_list_graphs():
-    assert db.list_graphs() == [graph_name]
+    assert db.graphs() == [graph_name]
 
 
 @pytest.mark.order7
@@ -133,7 +133,7 @@ def test_drop_graph():
     # Test drop graph
     result = db.drop_graph(graph_name)
     assert result is True
-    assert graph_name not in db.list_graphs()
+    assert graph_name not in db.graphs()
 
     # Test drop missing graph
     with pytest.raises(GraphDropError):

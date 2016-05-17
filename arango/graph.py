@@ -7,7 +7,7 @@ from arango.wrapper import APIWrapper
 
 
 class Graph(APIWrapper):
-    """Wrapper for ArangoDB's graph-specific APIs:
+    """ArangoDB graph object.
 
     1. Graph Properties
     2. Vertex Collection Management
@@ -15,16 +15,15 @@ class Graph(APIWrapper):
     4. Vertex Management
     5. Edge Management
     6. Graph Traversals
+
+    :param connection: ArangoDB API connection object
+    :type connection: arango.connection.Connection | arango.batch.Batch
+    :param name: the name of the graph
+    :type name: str
     """
 
     def __init__(self, connection, name):
-        """Initialize the wrapper object.
 
-        :param connection: ArangoDB API connection object
-        :type connection: arango.connection.Connection | arango.batch.Batch
-        :param name: the name of the graph
-        :type name: str
-        """
         self._conn = connection
         self._name = name
 

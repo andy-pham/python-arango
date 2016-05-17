@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 
+from random import randint
 from collections import Mapping, Iterable
 
 
@@ -11,11 +12,11 @@ def generate_db_name(conn):
     :returns: the next available database name
     :rtype: str
     """
-    num = 0
-    existing = set(conn.list_databases())
-    while "test_database_{num:03d}".format(num=num) in existing:
-        num += 1
-    return "test_database_{num:03d}".format(num=num)
+    num = randint(100000, 999999)
+    existing = set(conn.databases())
+    while "test_database_{num:06d}".format(num=num) in existing:
+        num = randint(100000, 999999)
+    return "test_database_{num:06d}".format(num=num)
 
 
 def generate_col_name(database):
@@ -26,11 +27,11 @@ def generate_col_name(database):
     :returns: the next available collection name
     :rtype: str
     """
-    num = 0
-    existing = set(database.list_collections())
-    while "test_collection_{num:03d}".format(num=num) in existing:
-        num += 1
-    return "test_collection_{num:03d}".format(num=num)
+    num = randint(100000, 999999)
+    existing = set(database.collections())
+    while "test_collection_{num:06d}".format(num=num) in existing:
+        num = randint(100000, 999999)
+    return "test_collection_{num:06d}".format(num=num)
 
 
 def generate_graph_name(database):
@@ -41,11 +42,11 @@ def generate_graph_name(database):
     :returns: the next available graph name
     :rtype: str
     """
-    num = 0
-    existing = set(database.list_graphs())
-    while "test_graph_{num:03d}".format(num=num) in existing:
-        num += 1
-    return "test_graph_{num:03d}".format(num=num)
+    num = randint(100000, 999999)
+    existing = set(database.graphs())
+    while "test_graph_{num:06d}".format(num=num) in existing:
+        num = randint(100000, 999999)
+    return "test_graph_{num:06d}".format(num=num)
 
 
 def generate_task_name(conn):
@@ -56,11 +57,11 @@ def generate_task_name(conn):
     :returns: the next available database name
     :rtype: str
     """
-    num = 0
-    existing = set(task['name'] for task in conn.list_tasks().values())
-    while "test_task_{num:03d}".format(num=num) in existing:
-        num += 1
-    return "test_task_{num:03d}".format(num=num)
+    num = randint(100000, 999999)
+    existing = set(task['name'] for task in conn.tasks().values())
+    while "test_task_{num:06d}".format(num=num) in existing:
+        num = randint(100000, 999999)
+    return "test_task_{num:06d}".format(num=num)
 
 
 def generate_user_name(conn):
@@ -71,11 +72,11 @@ def generate_user_name(conn):
     :returns: the next available database name
     :rtype: str
     """
-    num = 0
-    existing = set(conn.list_users())
-    while "test_user_{num:03d}".format(num=num) in existing:
-        num += 1
-    return "test_user_{num:03d}".format(num=num)
+    num = randint(100000, 999999)
+    existing = set(conn.users())
+    while "test_user_{num:06d}".format(num=num) in existing:
+        num = randint(100000, 999999)
+    return "test_user_{num:06d}".format(num=num)
 
 
 def clean_keys(obj):

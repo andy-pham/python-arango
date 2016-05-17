@@ -133,18 +133,18 @@ def test_endpoints():
 def test_database_management():
     # Test list databases
     # TODO something wrong here
-    result = conn.list_databases()
+    result = conn.databases()
     assert '_system' in result
 
-    result = conn.list_databases(user_only=True)
+    result = conn.databases(user_only=True)
     assert '_system' in result
 
-    assert db_name not in conn.list_databases()
+    assert db_name not in conn.databases()
 
     # Test create database
     result = conn.create_database(db_name)
     assert isinstance(result, Database)
-    assert db_name in conn.list_databases()
+    assert db_name in conn.databases()
 
     # Test get after create database
     assert isinstance(conn.db(db_name), Database)
@@ -155,12 +155,12 @@ def test_database_management():
         conn.create_database(db_name)
 
     # Test list after create database
-    assert db_name in conn.list_databases()
+    assert db_name in conn.databases()
 
     # Test drop database
     result = conn.drop_database(db_name)
     assert result is True
-    assert db_name not in conn.list_databases()
+    assert db_name not in conn.databases()
 
     # Test drop missing database
     with pytest.raises(DatabaseDeleteError):
@@ -173,7 +173,7 @@ def test_database_management():
 
 def test_user_management():
     # Test get users
-    users = conn.list_users()
+    users = conn.users()
     assert isinstance(users, dict)
     assert 'root' in users
 
@@ -182,7 +182,7 @@ def test_user_management():
     assert 'extra'in root_user
     assert 'change_password' in root_user
 
-    assert username not in conn.list_users()
+    assert username not in conn.users()
 
     # Test create user
     user = conn.create_user(
@@ -195,7 +195,7 @@ def test_user_management():
     assert user['active'] is True
     assert user['extra'] == {'hello': 'world'}
     assert user['change_password'] is False
-    assert username in conn.list_users()
+    assert username in conn.users()
 
     # Test create duplicate user
     with pytest.raises(UserCreateError):
@@ -253,7 +253,7 @@ def test_user_management():
     # Test delete user
     result = conn.delete_user(username)
     assert result is True
-    assert username not in conn.list_users()
+    assert username not in conn.users()
 
     # Test delete missing user
     with pytest.raises(UserDeleteError):
@@ -268,7 +268,7 @@ def test_task_management():
     global task_id
 
     # Test get tasks
-    tasks = conn.list_tasks()
+    tasks = conn.tasks()
     assert isinstance(tasks, dict)
     for task in tasks.values():
         assert 'command' in task
@@ -278,16 +278,16 @@ def test_task_management():
         assert 'name' in task
 
     # Test get task
-    tasks = conn.list_tasks()
+    tasks = conn.tasks()
     if tasks:
         chosen_task_id = random.choice(list(tasks.keys()))
-        retrieved_task = conn.get_task(chosen_task_id)
+        retrieved_task = conn.task(chosen_task_id)
         assert tasks[chosen_task_id] == retrieved_task
 
     cmd = "(function(params) { require('internal').print(params); })(params)"
 
     # Test create task
-    assert task_name not in conn.list_tasks()
+    assert task_name not in conn.tasks()
     task = conn.create_task(
         name=task_name,
         command=cmd,
@@ -296,11 +296,11 @@ def test_task_management():
         offset=3,
     )
     task_id = task['id']
-    assert task_id in conn.list_tasks()
-    assert task_name == conn.list_tasks()[task_id]['name']
+    assert task_id in conn.tasks()
+    assert task_name == conn.tasks()[task_id]['name']
 
     # Test get after create task
-    task = conn.get_task(task_id)
+    task = conn.task(task_id)
     assert task['command'] == cmd
     assert task['name'] == task_name
     assert task['period'] == 2
@@ -319,7 +319,7 @@ def test_task_management():
     # Test delete task
     result = conn.delete_task(task['id'])
     assert result is True
-    assert task_id not in conn.list_tasks()
+    assert task_id not in conn.tasks()
 
     # Test delete missing task
     with pytest.raises(TaskDeleteError):
@@ -344,7 +344,7 @@ def test_task_management():
     assert task['period'] == 3
 
     # Test get after create task with ID
-    task = conn.get_task(task_id)
+    task = conn.task(task_id)
     assert task['id'] == task_id
     assert task['command'] == cmd
     assert task['name'] == task_name

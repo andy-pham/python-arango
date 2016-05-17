@@ -77,7 +77,7 @@ class Database(object):
     # Collection Management #
     #########################
 
-    def list_collections(self):
+    def collections(self):
         """Return the names of the collections in this database.
 
         :returns: the names of the collections
@@ -197,7 +197,7 @@ class Database(object):
     # Graph Management #
     ####################
 
-    def list_graphs(self):
+    def graphs(self):
         """List all graphs in this database.
 
         :returns: the graphs in this database
