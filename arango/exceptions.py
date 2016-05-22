@@ -523,7 +523,7 @@ class GraphDropError(ArangoError):
     """Failed to delete the graph."""
 
 
-class GraphPropertyError(ArangoError):
+class GraphOptionsGetError(ArangoError):
     """Failed to get the graph property."""
 
 
@@ -531,9 +531,8 @@ class GraphTraversalError(ArangoError):
     """Failed to execute the graph traversal."""
 
 
-################################
-# Vertex Collection Exceptions #
-################################
+class OrphanCollectionListError(ArangoError):
+    """Failed to list the orphan collections."""
 
 
 class VertexCollectionListError(ArangoError):
@@ -544,13 +543,8 @@ class VertexCollectionCreateError(ArangoError):
     """Failed to create the vertex collection."""
 
 
-class VertexCollectionDropError(ArangoError):
+class VertexCollectionDeleteError(ArangoError):
     """Failed to delete the vertex collection."""
-
-
-#########################################
-# Edge Collection/Definition Exceptions #
-#########################################
 
 
 class EdgeDefinitionListError(ArangoError):

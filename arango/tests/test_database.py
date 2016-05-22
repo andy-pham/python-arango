@@ -127,6 +127,10 @@ def test_create_graph():
     with pytest.raises(GraphCreateError):
         db.create_graph(graph_name)
 
+    new_graph_name = generate_graph_name(db)
+    db.create_graph(new_graph_name)
+    assert new_graph_name in db.graphs()
+
 
 @pytest.mark.order9
 def test_drop_graph():

@@ -42,7 +42,7 @@ class VertexManagementTest(unittest.TestCase):
                         name=self.db_name, safe_delete=True)
 
     def test_create_vertex(self):
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={"_key": "vertex01", "value": 10}
         )
@@ -55,7 +55,7 @@ class VertexManagementTest(unittest.TestCase):
         )
 
     def test_update_vertex(self):
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={"_key": "vertex01", "value": 10}
         )
@@ -77,7 +77,7 @@ class VertexManagementTest(unittest.TestCase):
         )
 
     def test_replace_vertex(self):
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={"_key": "vertex01", "value": 10}
         )
@@ -99,7 +99,7 @@ class VertexManagementTest(unittest.TestCase):
         )
 
     def test_delete_vertex(self):
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={"_key": "vertex01", "value": 10}
         )

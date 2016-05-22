@@ -37,21 +37,21 @@ class EdgeManagementTest(unittest.TestCase):
             }],
         )
         # Create a few test vertices
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={
                 "_key": "vertex01",
                 "value": 1
             }
         )
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={
                 "_key": "vertex02",
                 "value": 1
             }
         )
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.vertex_col_name,
             data={
                 "_key": "vertex03",
@@ -64,7 +64,7 @@ class EdgeManagementTest(unittest.TestCase):
                         name=self.db_name, safe_delete=True)
 
     def test_create_edge(self):
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             data={
                 "_key": "edge01",
@@ -94,7 +94,7 @@ class EdgeManagementTest(unittest.TestCase):
         )
 
     def test_update_edge(self):
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             data={
                 "_key": "edge01",
@@ -121,7 +121,7 @@ class EdgeManagementTest(unittest.TestCase):
         )
 
     def test_replace_edge(self):
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             data={
                 "_key": "edge01",
@@ -148,7 +148,7 @@ class EdgeManagementTest(unittest.TestCase):
         )
 
     def test_delete_edge(self):
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             data={
                 "_key": "edge01",

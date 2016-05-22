@@ -41,44 +41,44 @@ class EdgeManagementTest(unittest.TestCase):
             }],
         )
         # Create a few test "from" vertices
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.from_col_name,
             data={"_key": "from01", "value": 1}
         )
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.from_col_name,
             data={"_key": "from02", "value": 2}
         )
         # Create a few test "to" vertices
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.to_col_name,
             data={"_key": "to01", "value": 1}
         )
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.to_col_name,
             data={"_key": "to02", "value": 2}
         )
-        self.graph.create_vertex(
+        self.graph.insert_vertex(
             self.to_col_name,
             data={"_key": "to03", "value": 3}
         )
 
         # Create a few test edges
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             {
                 "_from": "{}/{}".format(self.from_col_name, "from01"),
                 "_to": "{}/{}".format(self.to_col_name, "to01"),
             }
         )
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             {
                 "_from": "{}/{}".format(self.from_col_name, "from02"),
                 "_to": "{}/{}".format(self.to_col_name, "to02"),
             }
         )
-        self.graph.create_edge(
+        self.graph.insert_edge(
             self.edge_col_name,
             {
                 "_from": "{}/{}".format(self.from_col_name, "from02"),

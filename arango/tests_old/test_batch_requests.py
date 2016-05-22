@@ -151,17 +151,17 @@ class BatchRequestTest(unittest.TestCase):
     def test_batch_vertex_create(self):
         self.db.execute_batch([
             (
-                self.graph.create_vertex,
+                self.graph.insert_vertex,
                 [self.vertex_col_name, {"_key": "v01", "value": 1}],
                 {"sync": True}
             ),
             (
-                self.graph.create_vertex,
+                self.graph.insert_vertex,
                 [self.vertex_col_name, {"_key": "v02", "value": 2}],
                 {"sync": True}
             ),
             (
-                self.graph.create_vertex,
+                self.graph.insert_vertex,
                 [self.vertex_col_name, {"_key": "v03", "value": 3}],
                 {"sync": True}
             ),
@@ -266,7 +266,7 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -278,7 +278,7 @@ class BatchRequestTest(unittest.TestCase):
                 }
             ),
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -301,7 +301,7 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -313,7 +313,7 @@ class BatchRequestTest(unittest.TestCase):
                 }
             ),
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -348,7 +348,7 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -360,7 +360,7 @@ class BatchRequestTest(unittest.TestCase):
                 }
             ),
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -395,7 +395,7 @@ class BatchRequestTest(unittest.TestCase):
         ])
         self.db.execute_batch([
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
@@ -407,7 +407,7 @@ class BatchRequestTest(unittest.TestCase):
                 }
             ),
             (
-                self.graph.create_edge,
+                self.graph.insert_edge,
                 [self.edge_col_name],
                 {
                     "data": {
