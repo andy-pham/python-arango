@@ -324,7 +324,7 @@ class VertexGetError(ArangoError):
     """Failed to get the vertex."""
 
 
-class VertexCreateError(ArangoError):
+class VertexInsertError(ArangoError):
     """Failed to create the vertex."""
 
 
@@ -587,4 +587,16 @@ class StatisticsDescriptionGetError(ArangoError):
 class ServerRoleGetError(ArangoError):
     """Failed to get the role of the server in a cluster."""
 
+
+#####################
+# Asynchronous Jobs #
+#####################
+
+
+class JobInvalidError(ArangoError):
+    """Failed to retrieve the async job ID."""
+
+
+class JobNotFoundError(ArangoError):
+    """Failed to find the job (already deleted/fetched)"""
 

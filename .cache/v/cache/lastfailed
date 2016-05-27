@@ -1,1 +1,3 @@
-{}
+{
+  "arango/tests/test_graph.py::test_insert_vertex": true
+}

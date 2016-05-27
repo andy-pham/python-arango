@@ -12,22 +12,18 @@ from arango.request import Request
 from arango.wrapper import APIWrapper
 
 
-class Collection(APIWrapper):
-    """Wrapper for ArangoDB's collection-specific APIs.
+class BaseCollection(APIWrapper):
+    """Wrapper for ArangoDB collection-specific API endpoints.
 
     :param connection: ArangoDB API connection object
     :type connection: arango.connection.Connection | arango.batch.Batch
     :param name: the name of this collection
     :type name: str
     """
-
     def __init__(self, connection, name, edge=False):
         self._conn = connection
         self._name = name
         self._type = 'edge' if edge else 'document'
-
-    def __repr__(self):
-        return "<ArangoDB {} collection '{}'>".format(self._type, self._name)
 
     def __iter__(self):
         """Iterate through the documents in this collection.
@@ -369,10 +365,6 @@ class Collection(APIWrapper):
             return not res.body['error']
         return request, handler
 
-    #######################
-    # Document Management #
-    #######################
-
     def count(self):
         """Return the number of documents in this collection.
 
@@ -413,147 +405,6 @@ class Collection(APIWrapper):
                 return False
             raise DocumentGetError(res)
 
-        return request, handler
-
-    def insert(self, document, sync=False):
-        """Insert a single document into the collection.
-
-        If ``data`` contains the ``_key`` key, the value must be unique.
-        If this collection is an edge collection, ``data`` must contain the
-        ``_from`` and ``_to`` keys with valid vertex IDs as their values.
-
-        :param document: the body of the new document
-        :type document: dict
-        :param sync: wait for create to sync to disk
-        :type sync: bool
-        :returns: the id, rev and key of the new document
-        :rtype: dict
-        :raises:
-            DocumentInsertError,
-            DocumentInvalidError,
-            CollectionNotFoundError
-        """
-        params = {
-            'collection': self._name,
-            'waitForSync': sync,
-        }
-        self._edge_params(document, params)
-        request = Request(
-            method='post',
-            endpoint='/_api/{}'.format(self._type),
-            data=self._validate(document),
-            params=params
-        )
-
-        def handler(res):
-            if res.status_code == 400:
-                raise DocumentInvalidError(res)
-            elif res.status_code == 404:
-                raise CollectionNotFoundError(res)
-            elif res.status_code not in HTTP_OK:
-                raise DocumentInsertError(res)
-            return res.body
-        return request, handler
-
-    def insert_many(self, documents, halt_on_error=True, details=True):
-        """Insert documents into the collection in bulk.
-
-        The insert does not retain the order of the documents.
-
-        If ``complete`` is set to False, valid documents
-        will be imported while invalid ones are rejected, meaning only some of
-        the uploaded documents might have been imported.
-
-        If ``details`` parameter is set to True, the response will also contain
-        ``details`` attribute which is a list of detailed error messages.
-
-        :param documents: list of documents to import
-        :type documents: list
-        :param halt_on_error: stop the insert on an invalid document
-        :type halt_on_error: bool
-        :param details: return details about invalid documents
-        :type details: bool
-        :returns: the result of the bulk insert
-        :rtype: dict
-        :raises: DocumentsInsertManyError
-        """
-        request = Request(
-            method='post',
-            endpoint='/_api/import',
-            data='\r\n'.join([
-                json.dumps(self._validate(document))
-                for document in documents
-            ]),
-            params={
-                'type': 'documents',
-                'collection': self._name,
-                'complete': halt_on_error,
-                'details': details
-            }
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentInsertError(res)
-            del res.body['error']
-            return res.body
-        return request, handler
-
-    def get(self, key, revision=None, match=True):
-        """Return the document of with the specified key.
-
-        If the document revision ``rev`` is specified, it is compared against
-        the revision of the retrieved document. If ``match`` is set to True and
-        the revisions do NOT match, or if ``match`` is set to False and the
-        revisions DO match, ``DocumentRevisionError`` is raised.
-
-        :param key: the document key
-        :type key: str
-        :param revision: the document revision
-        :type revision: str | None
-        :param match: whether or not the revision should match
-        :type match: bool
-        :returns: the requested document | None if not found
-        :rtype: dict | None
-        :raises: DocumentRevisionError, DocumentGetError
-        """
-        request = Request(
-            method='get',
-            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
-            headers={
-                'If-Match' if match else 'If-None-Match': revision
-            } if revision else {}
-        )
-
-        def handler(res):
-            if res.status_code in {412, 304}:
-                raise DocumentRevisionError(res)
-            elif res.status_code == 404:
-                return None
-            elif res.status_code not in HTTP_OK:
-                raise DocumentGetError(res)
-            return res.body
-        return request, handler
-
-    def get_many(self, keys):
-        """Return all documents whose key is in ``keys``.
-
-        :param keys: the document keys
-        :type keys: list
-        :returns: the list of documents
-        :rtype: list
-        :raises: DocumentGetManyError
-        """
-        request = Request(
-            method='put',
-            endpoint='/_api/simple/lookup-by-keys',
-            data={'collection': self._name, 'keys': keys}
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentGetError(res)
-            return res.body['documents']
         return request, handler
 
     def find(self, filters):
@@ -609,292 +460,6 @@ class Collection(APIWrapper):
             if res.status_code not in HTTP_OK:
                 raise DocumentFindManyError(res)
             return Cursor(self._conn, res)
-        return request, handler
-
-    def update(self, key, data, revision=None, merge=True, keep_none=True,
-               sync=False):
-        """Update the specified document in this collection.
-
-        If ``keep_none`` is set to True, then attributes with value None
-        are retained. Otherwise, they are deleted from the document.
-
-        If ``data`` contains the ``_key`` key, it is ignored.
-
-        If the ``_rev`` key is in ``data``, the revision of the target
-        document must match against its value. Otherwise a DocumentRevision
-        error is thrown. If ``rev`` is also provided, its value is preferred.
-
-        The ``_from`` and ``_to`` attributes are immutable, and they are
-        ignored if present in ``data``
-
-        :param key: the document key
-        :type key: str
-        :param data: the body of the document to update
-        :type data: dict
-        :param revision: the document revision
-        :type revision: str | None
-        :param merge: whether to merge or overwrite sub-dictionaries
-        :type merge: bool | None
-        :param keep_none: whether or not to keep the items with value None
-        :type keep_none: bool
-        :param sync: wait for the update to sync to disk
-        :type sync: bool
-        :returns: the id, rev and key of the updated document
-        :rtype: dict
-        :raises: DocumentUpdateError
-        """
-        params = {
-            'waitForSync': sync,
-            'keepNull': keep_none,
-            'mergeObjects': merge
-        }
-        if revision is not None:
-            params['rev'] = revision
-            params['policy'] = 'error'
-        elif '_rev' in data:
-            params['rev'] = data['_rev']
-            params['policy'] = 'error'
-
-        request = Request(
-            method='patch',
-            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
-            data=data,
-            params=params
-        )
-
-        def handler(res):
-            if res.status_code == 412:
-                raise DocumentRevisionError(res)
-            if res.status_code not in HTTP_OK:
-                raise DocumentUpdateError(res)
-            del res.body['error']
-            return res.body
-        return request, handler
-
-    def find_and_update(self, filters, data, limit=None, keep_none=True,
-                        sync=False):
-        """Update all documents matching the given example document body.
-
-        :param filters: the match filter
-        :type filters: dict
-        :param data: the new document body to update with
-        :type data: dict
-        :param limit: maximum number of documents to return
-        :type limit: int
-        :param keep_none: whether or not to keep the None values
-        :type keep_none: bool
-        :param sync: wait for the update to sync to disk
-        :type sync: bool
-        :returns: the number of documents updated
-        :rtype: int
-        :raises: DocumentFindAndUpdateError
-        """
-        data = {
-            'collection': self._name,
-            'example': filters,
-            'newValue': data,
-            'keepNull': keep_none,
-            'waitForSync': sync,
-        }
-        if limit is not None:
-            data['limit'] = limit
-
-        request = Request(
-            method='put',
-            endpoint='/_api/simple/update-by-example',
-            data=data
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentFindAndUpdateError(res)
-            return res.body['updated']
-        return request, handler
-
-    def replace(self, key, data, revision=None, sync=False):
-        """Replace the specified document in this collection.
-
-        If ``data`` contains the ``_key`` key, it is ignored.
-
-        If the ``_rev`` key is in ``data``, the revision of the target
-        document must match against its value. Otherwise a DocumentRevision
-        error is thrown. If ``rev`` is also provided, its value is preferred.
-
-        The ``_from`` and ``_to`` attributes are immutable, and they are
-        ignored if present in ``data``.
-
-        :param key: the key of the document to be replaced
-        :type key: str
-        :param data: the body to replace the document with
-        :type data: dict
-        :param revision: the document revision must match this value
-        :type revision: str | None
-        :param sync: wait for the replace to sync to disk
-        :type sync: bool
-        :returns: the id, rev and key of the replaced document
-        :rtype: dict
-        :raises: DocumentReplaceError
-        """
-        params = {'waitForSync': sync}
-        if revision is not None:
-            params['rev'] = revision
-            params['policy'] = 'error'
-        elif '_rev' in data:
-            params['rev'] = data['_rev']
-            params['policy'] = 'error'
-
-        request = Request(
-            method='put',
-            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
-            params=params,
-            data=data
-        )
-
-        def handler(res):
-            if res.status_code == 412:
-                raise DocumentRevisionError(res)
-            elif res.status_code not in HTTP_OK:
-                raise DocumentReplaceError(res)
-            del res.body['error']
-            return res.body
-
-        return request, handler
-
-    def find_and_replace(self, filters, data, limit=None, sync=False):
-        """Replace all matching documents.
-
-        :param filters: the match filters
-        :type filters: dict
-        :param data: the replacement document
-        :type data: dict
-        :param limit: maximum number of documents to replace
-        :type limit: int
-        :param sync: wait for the replacement to sync to disk
-        :type sync: bool
-        :returns: the number of documents replaced
-        :rtype: int
-        :raises: DocumentReplaceManyError
-        """
-        data = {
-            'collection': self._name,
-            'example': filters,
-            'newValue': data,
-            'waitForSync': sync,
-        }
-        if limit is not None:
-            data['limit'] = limit
-
-        request = Request(
-            method='put',
-            endpoint='/_api/simple/replace-by-example',
-            data=data
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentReplaceManyError(res)
-            return res.body['replaced']
-
-        return request, handler
-
-    def delete(self, key, revision=None, sync=False, ignore_missing=True):
-        """Delete the specified document from this collection.
-
-        :param key: the key of the document to be deleted
-        :type key: str
-        :param revision: the document revision must match this value
-        :type revision: str | None
-        :param sync: wait for the delete to sync to disk
-        :type sync: bool
-        :param ignore_missing: ignore missing documents
-        :type ignore_missing: bool
-        :returns: the id, rev and key of the deleted document
-        :rtype: dict
-        :raises: DocumentRevisionError, DocumentDeleteError
-        """
-        params = {'waitForSync': sync}
-        if revision is not None:
-            params['rev'] = revision
-            params['policy'] = 'error'
-
-        request = Request(
-            method='delete',
-            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
-            params=params
-        )
-
-        def handler(res):
-            if res.status_code == 412:
-                raise DocumentRevisionError(res)
-            elif res.status_code == 404:
-                if ignore_missing:
-                    return False
-                else:
-                    raise DocumentDeleteError(res)
-            elif res.status_code not in HTTP_OK:
-                raise DocumentDeleteError(res)
-            return {
-                'id': res.body['_id'],
-                'key': res.body['_key'],
-                'revision': res.body['_rev']
-            }
-
-        return request, handler
-
-    def delete_many(self, keys):
-        """Remove all documents whose key is in ``keys``.
-
-        :param keys: keys of documents to delete
-        :type keys: list
-        :returns: the number of documents deleted
-        :rtype: dict
-        :raises: SimpleQueryDeleteByKeysError
-        """
-        request = Request(
-            method='put',
-            endpoint='/_api/simple/remove-by-keys',
-            data={'collection': self._name, 'keys': keys}
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentDeleteError(res)
-            return res.body
-
-        return request, handler
-
-    def find_and_delete(self, filters, limit=None, sync=False):
-        """Delete all matching documents from the collection.
-
-        :param filters: the match filters
-        :type filters: dict
-        :param limit: maximum number of documents to delete
-        :type limit: int
-        :param sync: wait for the deletion to sync to disk
-        :type sync: bool
-        :returns: the number of documents deleted
-        :rtype: int
-        :raises: DocumentDeleteManyError
-        """
-        data = {
-            'collection': self._name,
-            'example': filters,
-            'waitForSync': sync,
-        }
-        if limit is not None:
-            data['limit'] = limit
-
-        request = Request(
-            method='put',
-            endpoint='/_api/simple/remove-by-example',
-            data=data
-        )
-
-        def handler(res):
-            if res.status_code not in HTTP_OK:
-                raise DocumentDeleteManyError(res)
-            return res.body['deleted']
-
         return request, handler
 
     ############################
@@ -1502,5 +1067,459 @@ class Collection(APIWrapper):
             if res.status_code not in HTTP_OK:
                 raise IndexDeleteError(res)
             return res.body
+
+        return request, handler
+
+
+class Collection(BaseCollection):
+    """Wrapper for ArangoDB's collection-specific APIs.
+
+    :param connection: ArangoDB API connection object
+    :type connection: arango.connection.Connection | arango.batch.Batch
+    :param name: the name of this collection
+    :type name: str
+    """
+
+    def __init__(self, connection, name, edge=False):
+        super(Collection, self).__init__(connection, name, edge)
+
+    def __repr__(self):
+        return "<ArangoDB {} collection '{}'>".format(self._type, self._name)
+
+    @property
+    def name(self):
+        """Return the name of this collection.
+
+        :returns: the name of this collection
+        :rtype: str
+        """
+        return self._name
+
+    def get(self, key, revision=None, match=True):
+        """Return the document of with the specified key.
+
+        If ``revision`` is specified, it is compared against the revision of
+        the retrieved document. If ``match`` is set to True and the revisions
+        do NOT match, or if ``match`` is set to False and the revisions DO
+        match, ``DocumentRevisionError`` is raised.
+
+        :param key: the document key
+        :type key: str
+        :param revision: the document revision
+        :type revision: str | None
+        :param match: whether or not the revision should match
+        :type match: bool
+        :returns: the requested document | None if not found
+        :rtype: dict | None
+        :raises: DocumentRevisionError, DocumentGetError
+        """
+        request = Request(
+            method='get',
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
+            headers={
+                'If-Match' if match else 'If-None-Match': revision
+            } if revision else {}
+        )
+
+        def handler(res):
+            if res.status_code in {412, 304}:
+                raise DocumentRevisionError(res)
+            elif res.status_code == 404:
+                return None
+            elif res.status_code not in HTTP_OK:
+                raise DocumentGetError(res)
+            return res.body
+        return request, handler
+
+    def get_many(self, keys):
+        """Return all documents whose key is in ``keys``.
+
+        :param keys: the document keys
+        :type keys: list
+        :returns: the list of documents
+        :rtype: list
+        :raises: DocumentGetManyError
+        """
+        request = Request(
+            method='put',
+            endpoint='/_api/simple/lookup-by-keys',
+            data={'collection': self._name, 'keys': keys}
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentGetError(res)
+            return res.body['documents']
+        return request, handler
+
+    def insert(self, document, sync=False):
+        """Insert a single document into the collection.
+
+        If ``data`` contains the ``_key`` field, its value will be used as the
+        key of the new vertex. The must be unique in the vertex collection.
+
+        :param document: the body of the new document
+        :type document: dict
+        :param sync: wait for create to sync to disk
+        :type sync: bool
+        :returns: the ID, rev and key of the new document
+        :rtype: dict
+        :raises:
+            DocumentInsertError,
+            DocumentInvalidError,
+            CollectionNotFoundError
+        """
+        params = {
+            'collection': self._name,
+            'waitForSync': sync,
+        }
+        self._edge_params(document, params)
+        request = Request(
+            method='post',
+            endpoint='/_api/{}'.format(self._type),
+            data=self._validate(document),
+            params=params
+        )
+
+        def handler(res):
+            if res.status_code == 400:
+                raise DocumentInvalidError(res)
+            elif res.status_code == 404:
+                raise CollectionNotFoundError(res)
+            elif res.status_code not in HTTP_OK:
+                raise DocumentInsertError(res)
+            return res.body
+        return request, handler
+
+    def insert_many(self, documents, halt_on_error=True, details=True):
+        """Insert documents into the collection in bulk.
+
+        The insert does not retain the order of the documents.
+
+        If ``complete`` is set to False, valid documents
+        will be imported while invalid ones are rejected, meaning only some of
+        the uploaded documents might have been imported.
+
+        If ``details`` parameter is set to True, the response will also contain
+        ``details`` attribute which is a list of detailed error messages.
+
+        :param documents: list of documents to import
+        :type documents: list
+        :param halt_on_error: stop the insert on an invalid document
+        :type halt_on_error: bool
+        :param details: return details about invalid documents
+        :type details: bool
+        :returns: the result of the bulk insert
+        :rtype: dict
+        :raises: DocumentsInsertManyError
+        """
+        request = Request(
+            method='post',
+            endpoint='/_api/import',
+            data='\r\n'.join([
+                json.dumps(self._validate(document))
+                for document in documents
+            ]),
+            params={
+                'type': 'documents',
+                'collection': self._name,
+                'complete': halt_on_error,
+                'details': details
+            }
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentInsertError(res)
+            del res.body['error']
+            return res.body
+        return request, handler
+
+    def update(self, key, data, revision=None, merge=True, keep_none=True,
+               sync=False):
+        """Update the specified document in the collection.
+
+        If ``keep_none`` is set to True, fields with value None are retained.
+        Otherwise, the fields are removed completely from the vertex.
+
+        If ``data`` contains the ``_key`` field, the field is ignored.
+
+        If ``data`` contains the ``_rev`` field, or if ``revision`` is given,
+        the revision of the target vertex must match against its value.
+        Otherwise, VertexRevision is raised.
+
+        For edge collections, the ``_from`` and ``_to`` attributes are
+        immutable, and they are ignored if present in ``data``.
+
+        :param key: the document key
+        :type key: str
+        :param data: the body of to update the document with
+        :type data: dict
+        :param revision: the document revision
+        :type revision: str | None
+        :param merge: whether to merge or overwrite sub-dictionaries
+        :type merge: bool | None
+        :param keep_none: whether or not to keep the items with value None
+        :type keep_none: bool
+        :param sync: wait for the update to sync to disk
+        :type sync: bool
+        :returns: the ID, revision and key of the updated vertex
+        :rtype: dict
+        :raises: DocumentRevisionError, DocumentUpdateError
+        """
+        params = {
+            'waitForSync': sync,
+            'keepNull': keep_none,
+            'mergeObjects': merge
+        }
+        if revision is not None:
+            params['rev'] = revision
+            params['policy'] = 'error'
+        elif '_rev' in data:
+            params['rev'] = data['_rev']
+            params['policy'] = 'error'
+
+        request = Request(
+            method='patch',
+            endpoint='/_api/{}/{}/{}'.format(
+                self._type, self._name, key
+            ),
+            data=data,
+            params=params
+        )
+
+        def handler(res):
+            if res.status_code == 412:
+                raise DocumentRevisionError(res)
+            if res.status_code not in HTTP_OK:
+                raise DocumentUpdateError(res)
+            del res.body['error']
+            return res.body
+
+        return request, handler
+
+    def find_and_update(self, filters, data, limit=None, keep_none=True,
+                        sync=False):
+        """Update all documents matching the given example document body.
+
+        :param filters: the match filter
+        :type filters: dict
+        :param data: the new document body to update with
+        :type data: dict
+        :param limit: maximum number of documents to return
+        :type limit: int
+        :param keep_none: whether or not to keep the None values
+        :type keep_none: bool
+        :param sync: wait for the update to sync to disk
+        :type sync: bool
+        :returns: the number of documents updated
+        :rtype: int
+        :raises: DocumentFindAndUpdateError
+        """
+        data = {
+            'collection': self._name,
+            'example': filters,
+            'newValue': data,
+            'keepNull': keep_none,
+            'waitForSync': sync,
+        }
+        if limit is not None:
+            data['limit'] = limit
+
+        request = Request(
+            method='put',
+            endpoint='/_api/simple/update-by-example',
+            data=data
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentFindAndUpdateError(res)
+            return res.body['updated']
+        return request, handler
+
+    def replace(self, key, data, revision=None, sync=False):
+        """Replace the specified document in this collection.
+
+        If ``data`` contains the ``_key`` field, the field is ignored.
+
+        If ``data`` contains the ``_rev`` field, or if ``revision`` is given,
+        the revision of the target document must match against its value.
+        Otherwise, DocumentRevisionError is raised.
+
+        For edge collections, the ``_from`` and ``_to`` attributes are
+        immutable, and they are ignored if present in ``data``.
+
+        :param key: the key of the document to be replaced
+        :type key: str
+        :param data: the body to replace the document with
+        :type data: dict
+        :param revision: the document revision must match this value
+        :type revision: str | None
+        :param sync: wait for the replace to sync to disk
+        :type sync: bool
+        :returns: the ID, rev and key of the replaced document
+        :rtype: dict
+        :raises: DocumentReplaceError
+        """
+        params = {'waitForSync': sync}
+        if revision is not None:
+            params['rev'] = revision
+            params['policy'] = 'error'
+        elif '_rev' in data:
+            params['rev'] = data['_rev']
+            params['policy'] = 'error'
+
+        request = Request(
+            method='put',
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
+            params=params,
+            data=data
+        )
+
+        def handler(res):
+            if res.status_code == 412:
+                raise DocumentRevisionError(res)
+            elif res.status_code not in HTTP_OK:
+                raise DocumentReplaceError(res)
+            del res.body['error']
+            return res.body
+
+        return request, handler
+
+    def find_and_replace(self, filters, data, limit=None, sync=False):
+        """Replace all matching documents.
+
+        :param filters: the match filters
+        :type filters: dict
+        :param data: the replacement document
+        :type data: dict
+        :param limit: maximum number of documents to replace
+        :type limit: int
+        :param sync: wait for the replacement to sync to disk
+        :type sync: bool
+        :returns: the number of documents replaced
+        :rtype: int
+        :raises: DocumentReplaceManyError
+        """
+        data = {
+            'collection': self._name,
+            'example': filters,
+            'newValue': data,
+            'waitForSync': sync,
+        }
+        if limit is not None:
+            data['limit'] = limit
+
+        request = Request(
+            method='put',
+            endpoint='/_api/simple/replace-by-example',
+            data=data
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentReplaceManyError(res)
+            return res.body['replaced']
+
+        return request, handler
+
+    def delete(self, key, revision=None, sync=False, ignore_missing=True):
+        """Delete the specified document from this collection.
+
+        :param key: the key of the document to be deleted
+        :type key: str
+        :param revision: the document revision must match this value
+        :type revision: str | None
+        :param sync: wait for the delete to sync to disk
+        :type sync: bool
+        :param ignore_missing: ignore missing documents
+        :type ignore_missing: bool
+        :returns: the id, rev and key of the deleted document
+        :rtype: dict
+        :raises: DocumentRevisionError, DocumentDeleteError
+        """
+        params = {'waitForSync': sync}
+        if revision is not None:
+            params['rev'] = revision
+            params['policy'] = 'error'
+
+        request = Request(
+            method='delete',
+            endpoint='/_api/{}/{}/{}'.format(self._type, self._name, key),
+            params=params
+        )
+
+        def handler(res):
+            if res.status_code == 412:
+                raise DocumentRevisionError(res)
+            elif res.status_code == 404:
+                if ignore_missing:
+                    return False
+                else:
+                    raise DocumentDeleteError(res)
+            elif res.status_code not in HTTP_OK:
+                raise DocumentDeleteError(res)
+            return {
+                'id': res.body['_id'],
+                'key': res.body['_key'],
+                'revision': res.body['_rev']
+            }
+
+        return request, handler
+
+    def delete_many(self, keys):
+        """Remove all documents whose key is in ``keys``.
+
+        :param keys: keys of documents to delete
+        :type keys: list
+        :returns: the number of documents deleted
+        :rtype: dict
+        :raises: SimpleQueryDeleteByKeysError
+        """
+        request = Request(
+            method='put',
+            endpoint='/_api/simple/remove-by-keys',
+            data={'collection': self._name, 'keys': keys}
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentDeleteError(res)
+            return res.body
+
+        return request, handler
+
+    def find_and_delete(self, filters, limit=None, sync=False):
+        """Delete all matching documents from the collection.
+
+        :param filters: the match filters
+        :type filters: dict
+        :param limit: maximum number of documents to delete
+        :type limit: int
+        :param sync: wait for the deletion to sync to disk
+        :type sync: bool
+        :returns: the number of documents deleted
+        :rtype: int
+        :raises: DocumentDeleteManyError
+        """
+        data = {
+            'collection': self._name,
+            'example': filters,
+            'waitForSync': sync,
+        }
+        if limit is not None:
+            data['limit'] = limit
+
+        request = Request(
+            method='put',
+            endpoint='/_api/simple/remove-by-example',
+            data=data
+        )
+
+        def handler(res):
+            if res.status_code not in HTTP_OK:
+                raise DocumentDeleteManyError(res)
+            return res.body['deleted']
 
         return request, handler
