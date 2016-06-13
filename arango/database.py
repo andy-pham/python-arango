@@ -231,7 +231,7 @@ class Database(object):
 
         user_collections = []
         system_collections = []
-        for collection in res.body["collections"]:
+        for collection in res.body["result"]:
             if collection["isSystem"]:
                 system_collections.append(collection["name"])
             else:
